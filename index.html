@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pentatonic Harmony Instrument</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Pentatonic Harmony Touch Instrument</h1>
+        <div class="controls">
+            <label for="key-select">Key:</label>
+            <select id="key-select">
+                <option value="C">C Major</option>
+                <option value="G">G Major</option>
+                <option value="D">D Major</option>
+                <option value="A">A Major</option>
+                <option value="E">E Major</option>
+                <option value="F">F Major</option>
+            </select>
+            
+            <label for="harmony-type">Harmony Type:</label>
+            <select id="harmony-type">
+                <option value="chord">Full Chords</option>
+                <option value="power">Power Chords</option>
+                <option value="arpeggio">Arpeggios</option>
+            </select>
+            
+            <label for="volume">Volume:</label>
+            <input type="range" id="volume" min="0" max="100" value="50">
+        </div>
+        
+        <canvas id="instrument" width="800" height="400"></canvas>
+        
+        <div class="info">
+            <p>Touch the colored areas to play pentatonic notes with rich harmonies</p>
+            <div id="note-display">Touch to play</div>
+        </div>
+    </div>
+    
+    <script src="audio-engine.js"></script>
+    <script src="instrument.js"></script>
+</body>
+</html>
