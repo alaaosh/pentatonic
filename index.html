@@ -7,8 +7,15 @@
     <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-        <div class="app-layout">
-            <header class="top-bar">
+    <div id="audio-unlock" class="unlock-overlay">
+        <div class="unlock-content">
+            <h1>Pentatonic Synth</h1>
+            <p>High-performance harmonic instrument</p>
+            <button id="start-btn">Start Instrument</button>
+        </div>
+    </div>
+
+    <div class="app-layout">            <header class="top-bar">
                 <div class="control-group horizontal">
                     <label>Volume</label>
                     <input type="range" id="volume" min="0" max="100" value="50">

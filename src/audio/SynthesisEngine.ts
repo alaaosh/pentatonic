@@ -45,6 +45,12 @@ export class SynthesisEngine {
     this.envelope = { ...this.envelope, ...params };
   }
 
+  async resume() {
+    if (this.context.state === 'suspended') {
+      await this.context.resume();
+    }
+  }
+
   triggerNote(noteId: string | number, frequencies: number | number[], harmonyType: HarmonyType = 'none', waveform: Waveform = 'sawtooth') {
     if (this.context.state === 'suspended') {
       this.context.resume();
@@ -81,19 +87,12 @@ export class SynthesisEngine {
       const now = this.context.currentTime;
       const voice = this.createVoice(noteId, freq, now, 1, waveform);
       
-      // We still store it in voices to be able to stop it on release
       const currentVoices = this.voices.get(noteId) || [];
       currentVoices.push(voice);
       this.voices.set(noteId, currentVoices);
 
-      // Clean up old voices of this arpeggio that have finished their sustain/decay phase
-      // to avoid memory/voice bloat while holding.
       if (currentVoices.length > frequencies.length * 2) {
-          const oldVoice = currentVoices.shift();
-          if (oldVoice) {
-              // Note: it's already playing/scheduled, we just let it finish naturally
-              // or we could stop it if it's too old.
-          }
+          currentVoices.shift();
       }
 
       index = (index + 1) % frequencies.length;
@@ -101,7 +100,7 @@ export class SynthesisEngine {
       this.arpeggioIntervals.set(noteId, timer);
     };
 
-    this.arpeggioIntervals.set(noteId, 0); // Placeholder to indicate active
+    this.arpeggioIntervals.set(noteId, 0); 
     playNext();
   }
 
@@ -132,7 +131,6 @@ export class SynthesisEngine {
   }
 
   stopNote(noteId: string | number) {
-    // Stop arpeggio loop
     const interval = this.arpeggioIntervals.get(noteId);
     if (interval !== undefined) {
       window.clearTimeout(interval);
@@ -149,7 +147,7 @@ export class SynthesisEngine {
           voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + this.envelope.release);
           voice.oscillator.stop(now + this.envelope.release);
         } catch (e) {
-          // Ignore errors for already stopped nodes
+          // Ignore
         }
         this.totalVoices--;
       });
