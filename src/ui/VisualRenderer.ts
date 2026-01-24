@@ -21,14 +21,14 @@ export class VisualRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private noteAreas: NoteArea[] = [];
-  private activeNotes: Set<string> = new Set(); // Using "index-octave" as key
+  private activeNotes: Set<string> = new Set();
   
+  // Store state for resize recalculations
+  private currentNotes: PentatonicNote[] = [];
+  private currentOctaves: OctaveSettings | null = null;
+
   private readonly COLORS = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Blue
-    '#96CEB4', // Green
-    '#FFEAA7'  // Yellow
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'
   ];
 
   constructor(canvas: HTMLCanvasElement) {
@@ -37,16 +37,26 @@ export class VisualRenderer {
     if (!context) throw new Error('Could not get 2D context');
     this.ctx = context;
     
-    this.resize();
+    // Listen for resize events
     window.addEventListener('resize', () => this.resize());
+    
+    // MutationObserver to catch layout changes that don't trigger window.resize
+    const observer = new MutationObserver(() => this.resize());
+    observer.observe(document.body, { attributes: true, childList: true, subtree: true });
   }
 
   private setupHighDPI() {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    // Only update if dimensions actually changed to avoid loop
+    const newWidth = Math.floor(rect.width * dpr);
+    const newHeight = Math.floor(rect.height * dpr);
+    
+    if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+        this.canvas.width = newWidth;
+        this.canvas.height = newHeight;
+    }
     
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(dpr, dpr);
@@ -54,25 +64,41 @@ export class VisualRenderer {
 
   resize() {
     this.setupHighDPI();
+    if (this.currentNotes.length > 0 && this.currentOctaves) {
+        this.calculateNoteAreas();
+    }
     this.render();
   }
 
   updateLayout(notes: PentatonicNote[], octaves: OctaveSettings) {
+    this.currentNotes = notes;
+    this.currentOctaves = octaves;
+    this.setupHighDPI();
+    this.calculateNoteAreas();
+    this.render();
+  }
+
+  private calculateNoteAreas() {
+    if (!this.currentOctaves) return;
+    
     const rect = this.canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
-    const noteWidth = width / notes.length;
+    
+    // Handle cases where rect might be 0 temporarily
+    if (width === 0 || height === 0) return;
 
-    // Mapping rows to specific octaves
+    const noteWidth = width / this.currentNotes.length;
+
     const rows = [
-        { pct: 0.25, val: octaves.top },
-        { pct: 0.5, val: octaves.mid },
-        { pct: 0.25, val: octaves.bottom }
+        { pct: 0.25, val: this.currentOctaves.top },
+        { pct: 0.5, val: this.currentOctaves.mid },
+        { pct: 0.25, val: this.currentOctaves.bottom }
     ];
 
     this.noteAreas = [];
     
-    notes.forEach((note, noteIndex) => {
+    this.currentNotes.forEach((note, noteIndex) => {
         let currentY = 0;
         rows.forEach((row) => {
             const areaHeight = height * row.pct;
@@ -89,8 +115,6 @@ export class VisualRenderer {
             currentY += areaHeight;
         });
     });
-
-    this.render();
   }
 
   setActive(noteIndex: number, octave: number, isActive: boolean) {
@@ -115,36 +139,33 @@ export class VisualRenderer {
 
     this.ctx.clearRect(0, 0, width, height);
 
+    if (this.noteAreas.length === 0) return;
+
     this.noteAreas.forEach((area) => {
       const key = `${area.index}-${area.octave}`;
       const isActive = this.activeNotes.has(key);
 
-      // Distinguish octaves visually: brightness relative to middle row
-      // We assume middle row is at index 1 of the first column
-      const midOctave = this.noteAreas[1]?.octave || 4;
+      const midOctave = this.currentOctaves?.mid || 4;
       const brightnessShift = (area.octave === midOctave) ? 0 : (area.octave > midOctave ? 20 : -20);
       
       this.ctx.fillStyle = this.adjustBrightness(area.color, brightnessShift);
       this.ctx.fillRect(area.x, area.y, area.width, area.height);
 
-      // Draw active highlight
       if (isActive) {
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         this.ctx.fillRect(area.x, area.y, area.width, area.height);
       }
 
-      // Draw border
       this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       this.ctx.lineWidth = 1;
       this.ctx.strokeRect(area.x, area.y, area.width, area.height);
 
-      // Draw Label
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       const centerX = area.x + area.width / 2;
       const centerY = area.y + area.height / 2;
 
-      this.ctx.font = area.height < 60 ? 'bold 14px Arial' : 'bold 24px Arial';
+      this.ctx.font = area.height < 60 ? 'bold 12px Arial' : 'bold 20px Arial';
       
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       this.ctx.fillText(`${area.note.name}${area.octave}`, centerX + 1, centerY + 1);
