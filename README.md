@@ -10,11 +10,16 @@ Pentatonic Synth seeks to **democratize complex musical expression**. By exploit
 
 ## Features
 
-- **Intuitive Pentatonic Input**: A streamlined touch interface based on major, minor, blues, and traditional Japanese scales.
-- **Rich Harmonic Synthesis**: Real-time generation of complex harmonies that transcend the 5-note scale, providing professional-grade musical depth.
-- **Multi-touch & Glissando**: Support for expressive gestures, allowing for fluid melodic runs and powerful chordal stacks.
-- **Looping Arpeggiator**: Dynamic, time-based note patterns that respond to touch duration and pressure.
-- **Keyboard Mapping**: Professional desktop support via mapped keys (`A`, `S`, `D`, `F`, `G`).
+- **Intuitive Pentatonic Input**: A streamlined touch interface supporting Major, Minor, Blues, Yo, and Hirajoshi scales.
+- **Independent Multi-Octave Range**: A unique 3-octave vertical split layout (25%/50%/25%) allowing simultaneous playback across different registers.
+- **Rich Harmonic Synthesis**: Real-time generation of complex chromatic harmonies (Maj7, Min9, Sus4, etc.) that transcend the 5-note scale.
+- **Custom Musical Widgets**:
+    - **Chromatic Root Strip**: A 12-note grid for instant transposition.
+    - **Performance Mode Tabs**: Tactile segmented controls for switching between Single, Chord, Power, and Arpeggio modes.
+    - **Multi-Handle Octave Slider**: A single-track controller with shading-matched pegs for defining the range of each UI row.
+- **Looping Arpeggiator**: Dynamic, time-based note patterns that respond to touch duration.
+- **Responsive Workspace**: Landscape-optimized layout with sidebar-hosted controls, collapsing into a clean stack for mobile portrait use.
+- **Audio Safety**: Explicit "Start Instrument" overlay to comply with browser autoplay policies and ensure immediate sound.
 
 ## Technology Stack
 
@@ -46,41 +51,25 @@ Pentatonic Synth seeks to **democratize complex musical expression**. By exploit
 
 ### Development
 
-To start the development server with Hot Module Replacement (HMR):
-
+To start the development server:
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`.
-
 ### Production Build
-
-To create an optimized production build:
 
 ```bash
 npm run build
 ```
 
-The output will be generated in the `dist/` directory.
-
-### Running Tests
-
-Execute unit and property-based tests using Vitest:
-
-```bash
-npm run test
-```
-
 ## Controls
 
-- **Touch/Mouse**: Tap or click the colored note areas. Slide across areas to play glissando.
-- **Keyboard**:
-  - `A`: Root Note
-  - `S`: Second
-  - `D`: Third
-  - `F`: Fifth
-  - `G`: Sixth
+- **Touch/Mouse**: Tap/click the colored zones. Vertical position determines the octave (Bottom/Mid/Top).
+- **Keyboard**: Keys `A`, `S`, `D`, `F`, `G` map to the five pentatonic notes (Center Octave).
+- **UI Widgets**:
+    - **Root Grid**: Select the fundamental key.
+    - **Octave Slider**: Move the three pegs (Dark/Mid/Light grey) to set the octave for each UI row.
+    - **Harmony Tabs**: Choose the trigger mode (Single, Chord, Power, Arp).
 
 ## Documentation
 
@@ -90,8 +79,4 @@ npm run test
 
 ## License
 
-
-
 GPLv3 or later
-
-
