@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pentatonic Harmony Instrument</title>
-  <script type="module" crossorigin src="./assets/index-CZl3IbdR.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CZFbNypt.css">
+  <script type="module" crossorigin src="./assets/index-Ds6jOqPf.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-C1O7YcV3.css">
 </head>
 <body>
     <div id="audio-unlock" class="unlock-overlay">
@@ -21,7 +21,7 @@
             <h1>Pentatonic Synth</h1>
             <div class="top-bar-controls">
                 <!-- Master Volume (Vertical in Top Bar) -->
-                <div class="control-group horizontal">
+                <div class="control-group vol-group">
                     <label>Vol</label>
                     <div id="volume-slider" class="vertical-slider-container">
                         <div class="slider-track vertical">
@@ -33,32 +33,46 @@
 
                 <div class="control-divider vertical"></div>
 
-                <!-- Tone Shaping -->
-                <div class="control-group horizontal">
-                    <label>Wave</label>
-                    <div id="waveform-select" class="segmented-control">
-                        <button class="segment-btn active" data-value="sawtooth">Saw</button>
-                        <button class="segment-btn" data-value="square">Sqr</button>
-                        <button class="segment-btn" data-value="triangle">Tri</button>
-                        <button class="segment-btn" data-value="sine">Sin</button>
+                <!-- Tone Shaping Section (Wave + Dials) -->
+                <div class="tone-shaping-group">
+                    <div class="control-group">
+                        <label>Wave</label>
+                        <div id="waveform-select" class="segmented-control">
+                            <button class="segment-btn active" data-value="sawtooth">Saw</button>
+                            <button class="segment-btn" data-value="square">Sqr</button>
+                            <button class="segment-btn" data-value="triangle">Tri</button>
+                            <button class="segment-btn" data-value="sine">Sin</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="control-divider vertical"></div>
+                    <div class="control-divider vertical inner-divider"></div>
 
-                <!-- Synth Dials -->
-                <div class="synth-dials-row">
-                    <div class="control-group">
-                        <label>Filter</label>
-                        <div id="dial-filter" class="dial-container"></div>
-                    </div>
-                    <div class="control-group">
-                        <label>Attack</label>
-                        <div id="dial-attack" class="dial-container"></div>
-                    </div>
-                    <div class="control-group">
-                        <label>Release</label>
-                        <div id="dial-release" class="dial-container"></div>
+                    <!-- Synth Dials -->
+                    <div class="synth-dials-row">
+                        <div class="control-group">
+                            <label>Filter</label>
+                            <div id="dial-filter" class="dial-container"></div>
+                        </div>
+                        <div class="control-group">
+                            <label>Res</label>
+                            <div id="dial-resonance" class="dial-container"></div>
+                        </div>
+                        <div class="control-group">
+                            <label>Atk</label>
+                            <div id="dial-attack" class="dial-container"></div>
+                        </div>
+                        <div class="control-group">
+                            <label>Dec</label>
+                            <div id="dial-decay" class="dial-container"></div>
+                        </div>
+                        <div class="control-group">
+                            <label>Sus</label>
+                            <div id="dial-sustain" class="dial-container"></div>
+                        </div>
+                        <div class="control-group">
+                            <label>Rel</label>
+                            <div id="dial-release" class="dial-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
