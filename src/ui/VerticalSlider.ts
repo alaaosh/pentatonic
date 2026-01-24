@@ -19,6 +19,12 @@ export class VerticalSlider {
     this.value = initialValue;
     this.onChange = onChange;
 
+    this.container.setAttribute('tabindex', '0');
+    this.container.setAttribute('role', 'slider');
+    this.container.setAttribute('aria-label', 'Volume');
+    this.container.setAttribute('aria-valuemin', '0');
+    this.container.setAttribute('aria-valuemax', '1');
+
     this.setupEventListeners();
     this.updateVisuals();
   }
@@ -31,6 +37,35 @@ export class VerticalSlider {
     this.container.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
     window.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
     window.addEventListener('touchend', this.onMouseUp.bind(this));
+
+    this.container.addEventListener('keydown', this.onKeyDown.bind(this));
+  }
+
+  private onKeyDown(e: KeyboardEvent) {
+    let newVal = this.value;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+      newVal += 0.05;
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+      newVal -= 0.05;
+    } else if (e.key === 'PageUp') {
+      newVal += 0.2;
+    } else if (e.key === 'PageDown') {
+      newVal -= 0.2;
+    } else if (e.key === 'Home') {
+      newVal = 0;
+    } else if (e.key === 'End') {
+      newVal = 1;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    newVal = Math.max(0, Math.min(1, newVal));
+    if (this.value !== newVal) {
+      this.value = newVal;
+      this.updateVisuals();
+      this.onChange(this.value);
+    }
   }
 
   private onMouseDown(e: MouseEvent) {
@@ -77,5 +112,6 @@ export class VerticalSlider {
     const percent = this.value * 100;
     this.handle.style.top = `${100 - percent}%`;
     this.fill.style.height = `${percent}%`;
+    this.container.setAttribute('aria-valuenow', this.value.toFixed(2));
   }
 }
