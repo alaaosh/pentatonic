@@ -6,7 +6,21 @@ The **Pentatonic Synth** is a web-based virtual instrument that transforms touch
 
 The architecture follows a modular design with clear separation between input handling, audio processing, and visual rendering. This enables independent optimization of each component while maintaining tight integration for real-time performance.
 
-## 2. Architecture
+## 2. Technology Stack
+
+To ensure performance, maintainability, and correctness, the project uses the following modern stack:
+
+- **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict mode enabled) for type-safe interaction with complex audio/visual APIs.
+- **Build Tool**: [Vite](https://vitejs.dev/) for fast development iteration and efficient ES module bundling.
+- **Testing**:
+    - [Vitest](https://vitest.dev/) for unit testing.
+    - [fast-check](https://fast-check.dev/) for property-based testing (validating musical properties and system stability).
+- **Core APIs**:
+    - **Web Audio API**: For low-latency, client-side sound synthesis.
+    - **Canvas API**: For high-performance (60fps) visual rendering.
+- **CI/CD**: GitHub Actions for automated testing and deployment.
+
+## 3. Architecture
 
 The system uses a layered architecture with the following components:
 
@@ -29,14 +43,14 @@ graph TB
     A --> I
 ```
 
-### 2.1. Layers
+### 3.1. Layers
 
 - **Touch Interface Layer**: Captures and processes multi-touch input, handling gesture recognition and touch pressure detection.
-- **Event Processing Layer**: Central coordinator that receives touch events and dispatches them to audio and visual systems with precise timing.
+- **Event Processing Layer**: Implements a **Pub/Sub (Publisher/Subscriber)** pattern to decouple input rates from processing rates. This ensures that high-frequency audio processing and frame-based visual rendering can consume events at their optimal cadence without blocking each other.
 - **Audio Engine Layer**: Manages polyphonic synthesis, applies effects, and handles audio output through the Web Audio API.
 - **Visual Feedback Layer**: Renders real-time visual responses to user interactions using hardware-accelerated graphics.
 
-## 3. Components and Interfaces
+## 4. Components and Interfaces
 
 ### 3.1. TouchHandler Component
 
@@ -247,3 +261,16 @@ The testing approach combines unit tests for specific functionality with propert
 ### Configuration
 - **Property Tests**: Minimum 100 iterations per property, referencing design properties.
 - **Libraries**: Web Audio API test utilities, mock audio contexts, and property-based testing libraries (e.g., fast-check).
+
+## 8. Deployment & CI/CD
+
+The project adopts a Continuous Integration and Continuous Deployment (CI/CD) strategy to ensure stability and rapid delivery.
+
+- **Automated Testing**: On every Pull Request, GitHub Actions will trigger:
+    - `npm run lint`: Static code analysis.
+    - `npm run test`: Unit and property-based tests.
+    - `npm run build`: Production build verification.
+- **Deployment**:
+    - The application is a static site (Single Page Application).
+    - Merges to the `main` branch automatically deploy to **GitHub Pages** (or Netlify/Vercel) via a dedicated workflow.
+    - Semantic Versioning (semver) is used for releases.

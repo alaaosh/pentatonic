@@ -1,0 +1,143 @@
+import { ScaleManager, ScaleKey, HarmonyType } from './audio/ScaleManager';
+import { SynthesisEngine } from './audio/SynthesisEngine';
+import { VisualRenderer } from './ui/VisualRenderer';
+import { TouchHandler } from './ui/TouchHandler';
+import { globalEvents, EventType, NoteOnEvent, NoteOffEvent } from './utils/EventProcessor';
+import './styles.css';
+
+// App State
+let currentKey: ScaleKey = 'C';
+let currentOctave = 4;
+let currentHarmony: HarmonyType = 'chord';
+
+// DOM Elements
+const canvas = document.getElementById('instrument') as HTMLCanvasElement;
+const keySelect = document.getElementById('key-select') as HTMLSelectElement;
+const harmonySelect = document.getElementById('harmony-type') as HTMLSelectElement;
+const volumeSlider = document.getElementById('volume') as HTMLInputElement;
+const noteDisplay = document.getElementById('note-display');
+
+if (!canvas) {
+    throw new Error('Canvas element not found');
+}
+
+// Initialize Components
+const renderer = new VisualRenderer(canvas);
+const audio = new SynthesisEngine();
+const touch = new TouchHandler(canvas, renderer);
+
+// --- Subscriptions ---
+
+globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
+    const notes = ScaleManager.generatePentatonicScale(currentKey, currentOctave);
+    const rootNote = notes[data.index];
+    
+    if (rootNote) {
+        const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType);
+        const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave));
+        
+        audio.triggerNote(data.index, frequencies, data.harmonyType);
+        
+        if (noteDisplay) {
+            noteDisplay.textContent = `Playing: ${rootNote.name} (${data.harmonyType})`;
+        }
+    }
+    
+    renderer.setActive(data.index, true);
+});
+
+globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
+    audio.stopNote(data.index);
+    renderer.setActive(data.index, false);
+    
+    if (noteDisplay) {
+        setTimeout(() => {
+             if (noteDisplay.textContent?.startsWith('Playing')) {
+                 noteDisplay.textContent = 'Touch to play';
+             }
+        }, 500);
+    }
+});
+
+// --- Input Handling -> Event Emission ---
+
+touch.onNoteStart = (noteIndex) => {
+    const freq = ScaleManager.getFrequency(currentKey, noteIndex, currentOctave);
+    globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
+        index: noteIndex,
+        frequency: freq,
+        velocity: 1.0,
+        harmonyType: currentHarmony
+    });
+};
+
+touch.onNoteStop = (noteIndex) => {
+    globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
+        index: noteIndex
+    });
+};
+
+// Helper to update the scale layout
+const updateLayout = () => {
+    const notes = ScaleManager.generatePentatonicScale(currentKey, currentOctave);
+    renderer.updateLayout(notes);
+};
+
+// UI Controls Listeners
+if (keySelect) {
+    keySelect.addEventListener('change', (e) => {
+        currentKey = (e.target as HTMLSelectElement).value as ScaleKey;
+        updateLayout();
+    });
+}
+
+if (harmonySelect) {
+    harmonySelect.addEventListener('change', (e) => {
+        currentHarmony = (e.target as HTMLSelectElement).value as HarmonyType;
+    });
+    // Set initial value from DOM
+    currentHarmony = harmonySelect.value as HarmonyType;
+}
+
+if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+        const val = parseFloat((e.target as HTMLInputElement).value) / 100;
+        audio.setVolume(val);
+    });
+}
+
+// Initial Setup
+updateLayout();
+
+// Prevent default gestures on the document to stop scrolling/zooming while playing
+document.addEventListener('touchmove', (e) => {
+    if (e.target === canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+console.log('Pentatonic Synth Initialized');
+
+// UI Controls Listeners
+if (keySelect) {
+    keySelect.addEventListener('change', (e) => {
+        currentKey = (e.target as HTMLSelectElement).value as ScaleKey;
+        updateLayout();
+    });
+}
+
+if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+        const val = parseFloat((e.target as HTMLInputElement).value) / 100;
+        audio.setVolume(val);
+    });
+}
+
+// Prevent default gestures on the document to stop scrolling/zooming while playing
+document.addEventListener('touchmove', (e) => {
+    if (e.target === canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+console.log('Pentatonic Synth Initialized');

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pentatonic Harmony Instrument</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
     <div class="container">
@@ -22,7 +22,8 @@
             
             <label for="harmony-type">Harmony Type:</label>
             <select id="harmony-type">
-                <option value="chord">Full Chords</option>
+                <option value="none">Single Note</option>
+                <option value="chord" selected>Full Chords</option>
                 <option value="power">Power Chords</option>
                 <option value="arpeggio">Arpeggios</option>
             </select>
@@ -31,15 +32,18 @@
             <input type="range" id="volume" min="0" max="100" value="50">
         </div>
         
-        <canvas id="instrument" width="800" height="400"></canvas>
+        <canvas id="instrument" width="800" height="400" 
+            tabindex="0" 
+            role="application" 
+            aria-label="Pentatonic Musical Instrument" 
+            aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
         
         <div class="info">
-            <p>Touch the colored areas to play pentatonic notes with rich harmonies</p>
-            <div id="note-display">Touch to play</div>
+            <p>Touch the colored areas or use keys <strong>A, S, D, F, G</strong> to play</p>
+            <div id="note-display" aria-live="polite">Touch to play</div>
         </div>
     </div>
     
-    <script src="audio-engine.js"></script>
-    <script src="instrument.js"></script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

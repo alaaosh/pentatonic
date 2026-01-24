@@ -1,0 +1,31 @@
+{
+  "name": "pentatonic",
+  "version": "1.0.0",
+  "description": "This directory contains the technical specifications and implementation plans for the Pentatonic Synth project.",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alaaosh/pentatonic.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/alaaosh/pentatonic/issues"
+  },
+  "homepage": "https://github.com/alaaosh/pentatonic#readme",
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "fast-check": "^4.5.3",
+    "jsdom": "^27.4.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
+  }
+}

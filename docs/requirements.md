@@ -104,3 +104,14 @@ The **Pentatonic Synth** is a virtual musical instrument designed for touch scre
 3. THE Touch_Interface SHALL adapt to both portrait and landscape orientations.
 4. THE Audio_Engine SHALL detect and utilize available audio hardware features when present.
 5. THE Touch_Interface SHALL provide fallback options for devices with limited touch sensitivity.
+
+### Requirement 9: Accessibility (A11y)
+
+**User Story:** As a user with diverse abilities (or using a desktop), I want to be able to play and navigate the instrument using a keyboard or assistive technology.
+
+**Acceptance Criteria:**
+1. THE Touch_Interface SHALL support keyboard input, mapping specific keys (e.g., 'A', 'S', 'D', 'F', 'G') to the five pentatonic note areas.
+2. THE interface SHALL use standard ARIA labels to describe interactive elements (note areas, controls) for screen readers.
+3. ALL interactive controls (sliders, dropdowns) SHALL be focusable and adjustable via keyboard navigation (Tab, Arrow keys).
+4. THE Visual_Feedback SHALL have sufficient color contrast ratios (meeting WCAG AA standards) for visibility.
+5. THE application SHALL NOT rely solely on color to convey information (e.g., using shape or position redundancy).

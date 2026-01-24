@@ -4,62 +4,42 @@
 
 This document outlines the step-by-step plan to build the modular Pentatonic Synth. The tasks move from core audio foundations to touch interface, visual feedback, and finally integration and polish.
 
-## Phase 1: Foundation & Audio Core
+## Phase 1: Infrastructure & Refactoring Strategy
 
-- [ ] **1. Project Setup**
-    - [x] Create basic HTML/CSS structure.
-    - [x] Initialize Web Audio API context.
-    - [ ] Configure audio context suspension handling.
-    - _Requirements: 3.1, 8.2_
+This phase focuses on modernizing the stack and extracting logic from the legacy monolithic files into the new modular architecture.
 
-- [ ] **2. Pentatonic Scale Logic**
-    - [ ] **2.1 ScaleManager Component**: Implement frequency calculations and transposition.
-        - `generatePentatonicFrequencies(root, octave)`
-        - `transposeScale(newRoot)`
-        - `getFrequency(noteIndex, octave)`
-    - [ ] *2.2 Test: Property 6 (Scale Accuracy)*
-    - [ ] *2.3 Test: Property 7 (Transposition)*
-    - [ ] *2.4 Test: Property 8 (Octave Relations)*
-    - _Requirements: 4.1, 4.2, 4.4_
+- [ ] **1. Infrastructure Migration**
+    - [ ] 1.1 Initialize `package.json` and install dependencies (Vite, TypeScript).
+    - [ ] 1.2 Setup testing harness (Vitest, fast-check).
+    - [ ] 1.3 Configure Linting & Formatting (ESLint, Prettier).
+    - [ ] 1.4 Setup CI/CD pipeline (GitHub Actions).
 
-- [ ] **3. Synthesis Engine**
-    - [ ] **3.1 SynthesisEngine Component**: Implement oscillator and voice management.
-        - `createOscillator(freq, waveform)`
-        - ADSR Envelope implementation (`applyEnvelope`)
-        - Voice pool (limit 10+ voices, recycling strategy)
-    - [ ] *3.2 Test: Property 1 (Audio Latency)*
-    - [ ] *3.3 Test: Unit tests for voice management*
-    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+- [ ] **2. Core Logic Extraction (Refactoring)**
+    - [ ] **2.1 Extract ScaleManager**: Migrate scale logic from `instrument.js` to a pure TypeScript module.
+        - Implement `generatePentatonicFrequencies`, `transposeScale`.
+        - *Test: Properties 6, 7, 8 (Scale Accuracy).*
+    - [ ] **2.2 Extract AudioEngine**: Migrate audio synthesis from `audio-engine.js` to TypeScript.
+        - Implement `SynthesisEngine` class with strict typing.
+        - *Test: Property 1 & Unit tests for voice management.*
+    - [ ] **2.3 Extract VisualRenderer**: Migrate canvas drawing from `instrument.js` to `VisualRenderer.ts`.
+        - *Test: Property 9 (Layout).*
 
 ## Phase 2: Input & Interaction
 
-- [ ] **4. Touch Handling**
-    - [ ] **4.1 TouchHandler Component**: Manage multi-touch and gestures.
-        - `handleTouchStart`, `Move`, `End`
-        - Pressure detection (with fallback)
-        - Coordinate normalization
-    - [ ] *4.2 Test: Property 2 (Multi-touch)*
-    - [ ] *4.3 Test: Property 5 (Filtering)*
-    - [ ] *4.4 Test: Property 4 (Pressure)*
-    - _Requirements: 2.1 - 2.5, 8.5_
+- [ ] **3. Enhanced Input Handling**
+    - [ ] **3.1 TouchHandler Component**: Implement robust multi-touch processing.
+        - Pressure normalization.
+        - *Test: Property 2, 4, 5.*
+    - [ ] **3.2 Accessibility Layer (New)**:
+        - Implement Keyboard mapping (A-S-D-F-G).
+        - Add ARIA labels and focus management.
+        - *Test: Verify keyboard interaction & screen reader support.*
 
-- [ ] **5. Visual Interface**
-    - [ ] **5.1 VisualRenderer Component**: Canvas-based rendering.
-        - `renderNoteAreas()` (responsive)
-        - `updateTouchFeedback()` (animations)
-        - `animateNoteActivation()`
-    - [ ] *5.2 Test: Property 9 (Layout Consistency)*
-    - [ ] *5.3 Test: Property 1 (Visual Feedback)*
-    - [ ] *5.4 Test: Property 3 (Release Behavior)*
-    - _Requirements: 1.1 - 1.5, 5.1 - 5.5_
+- [ ] **4. Event Coordination**
+    - [ ] **4.1 EventProcessor**: Implement Pub/Sub pattern.
+        - Decouple Touch/Keyboard events from Audio/Visual consumers.
+    - [ ] *4.2 Test: End-to-end integration.*
 
-## Phase 3: Integration & Features
-
-- [ ] **6. System Integration**
-    - [ ] **6.1 EventProcessor**: Wire components together.
-        - Connect `TouchHandler` -> `ScaleManager` -> `SynthesisEngine`
-        - Sync Visuals with Audio events.
-    - [ ] *6.2 Test: End-to-end pipeline integration*
 
 - [ ] **7. Advanced Controls**
     - [ ] **7.1 UI Controls**: Parameter adjustment.
