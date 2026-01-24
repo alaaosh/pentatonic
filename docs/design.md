@@ -2,73 +2,26 @@
 
 ## 1. Overview
 
-The **Pentatonic Synth** is a web-based virtual instrument that transforms touch screen devices into expressive musical instruments. The system consists of three main layers: a responsive touch interface, a real-time audio synthesis engine, and a visual feedback system. The instrument uses the pentatonic scale to provide an accessible yet musically rich playing experience.
+The **Pentatonic Synth** is a web-based virtual instrument that transforms touch screen devices into expressive musical instruments. The system is built on the philosophy of **Intuitive Complexity**: exploiting the naturally accessible pentatonic scale to democratize music theory. 
 
-The architecture follows a modular design with clear separation between input handling, audio processing, and visual rendering. This enables independent optimization of each component while maintaining tight integration for real-time performance.
+It allows users who are not trained in musical theory to access and perform rich, sophisticated harmonies that utilize the full chromatic spectrum. By handling harmonic logic within the audio engine, the instrument ensures that every interaction is musically valid while remaining creatively deep.
 
 ## 2. Technology Stack
-
-To ensure performance, maintainability, and correctness, the project uses the following modern stack:
-
-- **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict mode enabled) for type-safe interaction with complex audio/visual APIs.
-- **Build Tool**: [Vite](https://vitejs.dev/) for fast development iteration and efficient ES module bundling.
-- **Testing**:
-    - [Vitest](https://vitest.dev/) for unit testing.
-    - [fast-check](https://fast-check.dev/) for property-based testing (validating musical properties and system stability).
-- **Core APIs**:
-    - **Web Audio API**: For low-latency, client-side sound synthesis.
-    - **Canvas API**: For high-performance (60fps) visual rendering.
-- **CI/CD**: GitHub Actions for automated testing and deployment.
-
+...
 ## 3. Architecture
-
-The system uses a layered architecture with the following components:
-
-```mermaid
-graph TB
-    A[Touch Interface Layer] --> B[Event Processing Layer]
-    B --> C[Audio Engine Layer]
-    B --> D[Visual Feedback Layer]
-    C --> E[Web Audio API]
-    D --> F[Canvas/WebGL Renderer]
-    
-    subgraph "Core Systems"
-        G[Scale Manager]
-        H[Synthesis Engine]
-        I[Touch Handler]
-    end
-    
-    B --> G
-    C --> H
-    A --> I
-```
-
+...
 ### 3.1. Layers
 
-- **Touch Interface Layer**: Captures and processes multi-touch input, handling gesture recognition and touch pressure detection.
-- **Event Processing Layer**: Implements a **Pub/Sub (Publisher/Subscriber)** pattern to decouple input rates from processing rates. This ensures that high-frequency audio processing and frame-based visual rendering can consume events at their optimal cadence without blocking each other.
-- **Audio Engine Layer**: Manages polyphonic synthesis, applies effects, and handles audio output through the Web Audio API.
-- **Visual Feedback Layer**: Renders real-time visual responses to user interactions using hardware-accelerated graphics.
+- **Touch Interface Layer**: Captures normalized input across five intuitive zones.
+- **Event Processing Layer**: Decouples the simplified pentatonic input from the sophisticated harmonic synthesis.
+- **Audio Engine Layer**: Manages polyphonic synthesis, applying complex music theory to expand 5-note triggers into rich harmonic structures.
+- **Visual Feedback Layer**: Renders real-time visual responses to user interactions.
 
 ## 4. Components and Interfaces
 
-### 3.1. TouchHandler Component
-
-**Purpose**: Manages all touch input processing and gesture recognition.
-
-**Key Methods**:
-- `handleTouchStart(event)`: Processes initial touch contact.
-- `handleTouchMove(event)`: Tracks touch movement and pressure changes.
-- `handleTouchEnd(event)`: Handles touch release and note-off events.
-- `calibrateTouchSensitivity()`: Adjusts sensitivity based on device capabilities.
-
-**Interfaces**:
-- **Input**: Raw touch events from browser.
-- **Output**: Normalized touch data with pressure, position, and timing.
-
 ### 3.2. ScaleManager Component
 
-**Purpose**: Handles pentatonic scale calculations and transposition.
+**Purpose**: Handles scale calculations and harmonic expansion. It maps pentatonic indices to their corresponding root frequencies and generates complex harmonies (chords, arpeggios) using the full chromatic range to ensure musical richness.
 
 **Key Methods**:
 - `generatePentatonicFrequencies(root, octave)`: Calculates note frequencies.

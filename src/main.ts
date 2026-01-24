@@ -1,4 +1,4 @@
-import { ScaleManager, ScaleKey, HarmonyType } from './audio/ScaleManager';
+import { ScaleManager, RootNote, ScaleType, HarmonyType, ChordType } from './audio/ScaleManager';
 import { SynthesisEngine } from './audio/SynthesisEngine';
 import { VisualRenderer } from './ui/VisualRenderer';
 import { TouchHandler } from './ui/TouchHandler';
@@ -6,14 +6,18 @@ import { globalEvents, EventType, NoteOnEvent, NoteOffEvent } from './utils/Even
 import './styles.css';
 
 // App State
-let currentKey: ScaleKey = 'C';
+let currentRoot: RootNote = 'C';
+let currentScaleType: ScaleType = 'major';
 let currentOctave = 4;
 let currentHarmony: HarmonyType = 'chord';
+let currentChordType: ChordType = 'maj7';
 
 // DOM Elements
 const canvas = document.getElementById('instrument') as HTMLCanvasElement;
-const keySelect = document.getElementById('key-select') as HTMLSelectElement;
+const rootSelect = document.getElementById('root-select') as HTMLSelectElement;
+const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement;
 const harmonySelect = document.getElementById('harmony-type') as HTMLSelectElement;
+const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
 const volumeSlider = document.getElementById('volume') as HTMLInputElement;
 const noteDisplay = document.getElementById('note-display');
 
@@ -29,17 +33,17 @@ const touch = new TouchHandler(canvas, renderer);
 // --- Subscriptions ---
 
 globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
-    const notes = ScaleManager.generatePentatonicScale(currentKey, currentOctave);
+    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
     const rootNote = notes[data.index];
     
     if (rootNote) {
-        const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType);
+        const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType, data.chordType);
         const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave));
         
         audio.triggerNote(data.index, frequencies, data.harmonyType);
         
         if (noteDisplay) {
-            noteDisplay.textContent = `Playing: ${rootNote.name} (${data.harmonyType})`;
+            noteDisplay.textContent = `Playing: ${rootNote.name} (${data.harmonyType} ${data.chordType})`;
         }
     }
     
@@ -62,12 +66,13 @@ globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
 // --- Input Handling -> Event Emission ---
 
 touch.onNoteStart = (noteIndex) => {
-    const freq = ScaleManager.getFrequency(currentKey, noteIndex, currentOctave);
+    const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, noteIndex, currentOctave);
     globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
         index: noteIndex,
         frequency: freq,
         velocity: 1.0,
-        harmonyType: currentHarmony
+        harmonyType: currentHarmony,
+        chordType: currentChordType
     });
 };
 
@@ -79,14 +84,21 @@ touch.onNoteStop = (noteIndex) => {
 
 // Helper to update the scale layout
 const updateLayout = () => {
-    const notes = ScaleManager.generatePentatonicScale(currentKey, currentOctave);
+    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
     renderer.updateLayout(notes);
 };
 
 // UI Controls Listeners
-if (keySelect) {
-    keySelect.addEventListener('change', (e) => {
-        currentKey = (e.target as HTMLSelectElement).value as ScaleKey;
+if (rootSelect) {
+    rootSelect.addEventListener('change', (e) => {
+        currentRoot = (e.target as HTMLSelectElement).value as RootNote;
+        updateLayout();
+    });
+}
+
+if (scaleSelect) {
+    scaleSelect.addEventListener('change', (e) => {
+        currentScaleType = (e.target as HTMLSelectElement).value as ScaleType;
         updateLayout();
     });
 }
@@ -99,6 +111,13 @@ if (harmonySelect) {
     currentHarmony = harmonySelect.value as HarmonyType;
 }
 
+if (chordTypeSelect) {
+    chordTypeSelect.addEventListener('change', (e) => {
+        currentChordType = (e.target as HTMLSelectElement).value as ChordType;
+    });
+    currentChordType = chordTypeSelect.value as ChordType;
+}
+
 if (volumeSlider) {
     volumeSlider.addEventListener('input', (e) => {
         const val = parseFloat((e.target as HTMLInputElement).value) / 100;
@@ -108,30 +127,6 @@ if (volumeSlider) {
 
 // Initial Setup
 updateLayout();
-
-// Prevent default gestures on the document to stop scrolling/zooming while playing
-document.addEventListener('touchmove', (e) => {
-    if (e.target === canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-
-console.log('Pentatonic Synth Initialized');
-
-// UI Controls Listeners
-if (keySelect) {
-    keySelect.addEventListener('change', (e) => {
-        currentKey = (e.target as HTMLSelectElement).value as ScaleKey;
-        updateLayout();
-    });
-}
-
-if (volumeSlider) {
-    volumeSlider.addEventListener('input', (e) => {
-        const val = parseFloat((e.target as HTMLInputElement).value) / 100;
-        audio.setVolume(val);
-    });
-}
 
 // Prevent default gestures on the document to stop scrolling/zooming while playing
 document.addEventListener('touchmove', (e) => {
