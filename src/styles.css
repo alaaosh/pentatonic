@@ -24,10 +24,9 @@ body {
     grid-template-rows: auto 1fr;
     height: 100vh;
     width: 100%;
-    max-width: 1200px; /* Constrain width */
+    max-width: 1200px;
     padding: 15px;
     gap: 15px;
-    /* Removed background here to allow body gradient to flow through */
     box-shadow: 0 0 50px rgba(0,0,0,0.3);
 }
 
@@ -54,6 +53,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    align-items: center;
+    justify-content: center;
 }
 
 .sidebar {
@@ -149,8 +150,9 @@ body {
 }
 
 #instrument {
-    flex: 1;
+    flex: 0 1 600px;
     width: 100%;
+    max-width: 600px; /* 120px per key */
     border: 3px solid rgba(255,255,255,0.3);
     border-radius: 15px;
     background: rgba(0,0,0,0.2);
@@ -159,6 +161,8 @@ body {
 }
 
 #note-display {
+    width: 100%;
+    max-width: 600px;
     font-size: 1.2em;
     font-weight: bold;
     padding: 10px;
@@ -169,7 +173,7 @@ body {
 }
 
 /* Portrait Responsiveness */
-@media (max-width: 900px) or (orientation: portrait) {
+@media (max-width: 800px) or (orientation: portrait) {
     body { overflow-y: auto; height: auto; }
     .app-layout {
         grid-template-areas:
@@ -180,11 +184,15 @@ body {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto auto;
         height: auto;
+        padding: 10px;
         overflow-y: visible;
     }
     
     .top-bar { flex-direction: column; gap: 10px; }
-    #instrument { height: 400px; }
+    #instrument { 
+        height: 400px; 
+        max-width: 600px; /* Still keep it centered and sized for fingers */
+    }
     .root-grid { grid-template-columns: repeat(6, 1fr); }
     .segmented-control.vertical { flex-direction: row; }
 }
