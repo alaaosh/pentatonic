@@ -1,8 +1,10 @@
 import { ScaleManager, RootNote, ScaleType, HarmonyType, ChordType } from './audio/ScaleManager';
-import { SynthesisEngine } from './audio/SynthesisEngine';
+import { SynthesisEngine, Waveform } from './audio/SynthesisEngine';
 import { VisualRenderer } from './ui/VisualRenderer';
 import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
+import { DialWidget } from './ui/DialWidget';
+import { VerticalSlider } from './ui/VerticalSlider';
 import { globalEvents, EventType, NoteOnEvent, NoteOffEvent } from './utils/EventProcessor';
 import './styles.css';
 
@@ -19,7 +21,7 @@ const rootStrip = document.getElementById('root-strip');
 const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement;
 const harmonyMode = document.getElementById('harmony-mode');
 const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
-const volumeSlider = document.getElementById('volume') as HTMLInputElement;
+const waveformSelect = document.getElementById('waveform-select');
 const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
@@ -33,10 +35,33 @@ const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
 const touch = new TouchHandler(canvas, renderer);
 
+// --- Widget Initializations ---
+
+// Master Volume Vertical Slider
+new VerticalSlider('volume-slider', 0.5, (v) => {
+    audio.setVolume(v);
+});
+
 // Multi-handle Octave Slider
 new MultiRangeSlider('octave-slider', currentOctaves, (newValues) => {
     currentOctaves = { ...newValues };
     updateLayout();
+});
+
+// Synth Dials
+new DialWidget('dial-filter', {
+    min: 100, max: 10000, step: 10, initialValue: 2000, label: 'Cutoff',
+    onChange: (v) => audio.setFilter({ cutoff: v })
+});
+
+new DialWidget('dial-attack', {
+    min: 0.01, max: 2, step: 0.01, initialValue: 0.05, label: 'Atk',
+    onChange: (v) => audio.setEnvelope({ attack: v })
+});
+
+new DialWidget('dial-release', {
+    min: 0.1, max: 5, step: 0.1, initialValue: 1.0, label: 'Rel',
+    onChange: (v) => audio.setEnvelope({ release: v })
 });
 
 // --- Audio Unlock Logic ---
@@ -150,10 +175,13 @@ if (chordTypeSelect) {
     });
 }
 
-if (volumeSlider) {
-    volumeSlider.addEventListener('input', (e) => {
-        const val = parseFloat((e.target as HTMLInputElement).value) / 100;
-        audio.setVolume(val);
+if (waveformSelect) {
+    waveformSelect.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.segment-btn');
+        if (!btn) return;
+        audio.setWaveform(btn.getAttribute('data-value') as Waveform);
+        waveformSelect.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
     });
 }
 
