@@ -1,19 +1,23 @@
 import { VisualRenderer } from './VisualRenderer';
 
 export type TouchCallback = (noteIndex: number, octave: number) => void;
+export type ModulateCallback = (noteIndex: number, octave: number, relX: number, relY: number) => void;
 
 interface ActiveTouch {
   index: number;
   octave: number;
+  relX: number;
+  relY: number;
 }
 
 export class TouchHandler {
   private canvas: HTMLCanvasElement;
   private renderer: VisualRenderer;
-  private activeTouches: Map<number | string, ActiveTouch> = new Map(); // touchId -> ActiveTouch
+  private activeTouches: Map<number | string, ActiveTouch> = new Map();
   
   public onNoteStart?: TouchCallback;
   public onNoteStop?: TouchCallback;
+  public onNoteModulate?: ModulateCallback;
 
   constructor(canvas: HTMLCanvasElement, renderer: VisualRenderer) {
     this.canvas = canvas;
@@ -22,19 +26,14 @@ export class TouchHandler {
   }
 
   private setupEventListeners() {
-    // Touch Events
     this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
     this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
     this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
     this.canvas.addEventListener('touchcancel', this.handleTouchEnd.bind(this));
-
-    // Mouse Events
     this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
     this.canvas.addEventListener('mouseleave', this.handleMouseUp.bind(this));
-
-    // Keyboard Events
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
     window.addEventListener('keyup', this.handleKeyUp.bind(this));
   }
@@ -51,7 +50,7 @@ export class TouchHandler {
     const noteIndex = this.keyMap[e.key];
     if (noteIndex !== undefined) {
       this.activeKeys.add(e.key);
-      this.onNoteStart?.(noteIndex, 4); // Default to octave 4 for keyboard
+      this.onNoteStart?.(noteIndex, 4);
     }
   }
 
@@ -67,20 +66,29 @@ export class TouchHandler {
     const rect = this.canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    return this.renderer.getNoteAt(x, y);
+    
+    // Find the note area and calculate relative position (0-1)
+    const area = this.renderer.getAreaAt(x, y);
+    if (area) {
+        return {
+            index: area.index,
+            octave: area.octave,
+            relX: (x - area.x) / area.width,
+            relY: (y - area.y) / area.height
+        };
+    }
+    return null;
   }
-
-  // --- Touch Handlers ---
 
   private handleTouchStart(e: TouchEvent) {
     e.preventDefault();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
       const result = this.getNote(touch.clientX, touch.clientY);
-      
       if (result) {
         this.activeTouches.set(touch.identifier, result);
         this.onNoteStart?.(result.index, result.octave);
+        this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY);
       }
     }
   }
@@ -93,13 +101,15 @@ export class TouchHandler {
       const newTouch = this.getNote(touch.clientX, touch.clientY);
 
       if (newTouch && (!oldTouch || newTouch.index !== oldTouch.index || newTouch.octave !== oldTouch.octave)) {
-        if (oldTouch) {
-          this.onNoteStop?.(oldTouch.index, oldTouch.octave);
-        }
+        if (oldTouch) this.onNoteStop?.(oldTouch.index, oldTouch.octave);
         this.activeTouches.set(touch.identifier, newTouch);
         this.onNoteStart?.(newTouch.index, newTouch.octave);
-      } 
-      else if (!newTouch && oldTouch) {
+        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+      } else if (newTouch && oldTouch) {
+        // Same note, just modulate
+        this.activeTouches.set(touch.identifier, newTouch);
+        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+      } else if (!newTouch && oldTouch) {
          this.onNoteStop?.(oldTouch.index, oldTouch.octave);
          this.activeTouches.delete(touch.identifier);
       }
@@ -111,7 +121,6 @@ export class TouchHandler {
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
       const oldTouch = this.activeTouches.get(touch.identifier);
-      
       if (oldTouch) {
         this.onNoteStop?.(oldTouch.index, oldTouch.octave);
         this.activeTouches.delete(touch.identifier);
@@ -119,19 +128,19 @@ export class TouchHandler {
     }
   }
 
-  // --- Mouse Handlers ---
-
   private handleMouseDown(e: MouseEvent) {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return;
     const result = this.getNote(e.clientX, e.clientY);
     if (result) {
       this.activeTouches.set('mouse', result);
       this.onNoteStart?.(result.index, result.octave);
+      this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY);
     }
   }
 
   private handleMouseMove(e: MouseEvent) {
-    if (!this.activeTouches.has('mouse')) return;
+    const isDown = this.activeTouches.has('mouse');
+    if (!isDown) return;
 
     const oldTouch = this.activeTouches.get('mouse') as ActiveTouch;
     const newTouch = this.getNote(e.clientX, e.clientY);
@@ -140,7 +149,11 @@ export class TouchHandler {
       this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.set('mouse', newTouch);
       this.onNoteStart?.(newTouch.index, newTouch.octave);
-    } else if (!newTouch) {
+      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+    } else if (newTouch) {
+      this.activeTouches.set('mouse', newTouch);
+      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+    } else {
       this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.delete('mouse');
     }
