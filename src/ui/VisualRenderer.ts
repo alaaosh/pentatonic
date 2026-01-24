@@ -11,6 +11,12 @@ export interface NoteArea {
   note: PentatonicNote;
 }
 
+export interface OctaveSettings {
+  top: number;
+  mid: number;
+  bottom: number;
+}
+
 export class VisualRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -39,11 +45,9 @@ export class VisualRenderer {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     
-    // Set internal resolution
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
     
-    // Reset transform then scale
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(dpr, dpr);
   }
@@ -53,28 +57,28 @@ export class VisualRenderer {
     this.render();
   }
 
-  updateLayout(notes: PentatonicNote[], baseOctave: number, octaveOffset: number = 1) {
+  updateLayout(notes: PentatonicNote[], octaves: OctaveSettings) {
     const rect = this.canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
     const noteWidth = width / notes.length;
 
-    // Split heights: Top 25% (+offset), Center 50% (base), Bottom 25% (-offset)
-    const heights = [
-        { pct: 0.25, offset: octaveOffset },
-        { pct: 0.5, offset: 0 },
-        { pct: 0.25, offset: -octaveOffset }
+    // Mapping rows to specific octaves
+    const rows = [
+        { pct: 0.25, val: octaves.top },
+        { pct: 0.5, val: octaves.mid },
+        { pct: 0.25, val: octaves.bottom }
     ];
 
     this.noteAreas = [];
     
     notes.forEach((note, noteIndex) => {
         let currentY = 0;
-        heights.forEach((h) => {
-            const areaHeight = height * h.pct;
+        rows.forEach((row) => {
+            const areaHeight = height * row.pct;
             this.noteAreas.push({
                 index: noteIndex,
-                octave: baseOctave + h.offset,
+                octave: row.val,
                 x: noteIndex * noteWidth,
                 y: currentY,
                 width: noteWidth,
@@ -115,10 +119,10 @@ export class VisualRenderer {
       const key = `${area.index}-${area.octave}`;
       const isActive = this.activeNotes.has(key);
 
-      // Distinguish octaves visually: brightness
-      // Use the center octave of the first column as base
-      const baseOctave = this.noteAreas[1]?.octave || 4;
-      const brightnessShift = (area.octave === baseOctave) ? 0 : (area.octave > baseOctave ? 20 : -20);
+      // Distinguish octaves visually: brightness relative to middle row
+      // We assume middle row is at index 1 of the first column
+      const midOctave = this.noteAreas[1]?.octave || 4;
+      const brightnessShift = (area.octave === midOctave) ? 0 : (area.octave > midOctave ? 20 : -20);
       
       this.ctx.fillStyle = this.adjustBrightness(area.color, brightnessShift);
       this.ctx.fillRect(area.x, area.y, area.width, area.height);
