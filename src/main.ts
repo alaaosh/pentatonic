@@ -51,9 +51,24 @@ new DialWidget('dial-filter', {
     onChange: (v) => audio.setFilter({ cutoff: v })
 });
 
+new DialWidget('dial-resonance', {
+    min: 0, max: 20, step: 0.1, initialValue: 1, label: 'Res',
+    onChange: (v) => audio.setFilter({ resonance: v })
+});
+
 new DialWidget('dial-attack', {
     min: 0.01, max: 2, step: 0.01, initialValue: 0.05, label: 'Atk',
     onChange: (v) => audio.setEnvelope({ attack: v })
+});
+
+new DialWidget('dial-decay', {
+    min: 0.01, max: 2, step: 0.01, initialValue: 0.2, label: 'Dec',
+    onChange: (v) => audio.setEnvelope({ decay: v })
+});
+
+new DialWidget('dial-sustain', {
+    min: 0, max: 1, step: 0.01, initialValue: 0.3, label: 'Sus',
+    onChange: (v) => audio.setEnvelope({ sustain: v })
 });
 
 new DialWidget('dial-release', {

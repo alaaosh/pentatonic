@@ -169,10 +169,11 @@ export class SynthesisEngine {
     filterNode.frequency.setValueAtTime(this.filter.cutoff, startTime);
     filterNode.Q.setValueAtTime(this.filter.resonance, startTime);
 
+    const peak = 0.4 / div;
     gainNode.gain.value = 0;
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(0.4 / div, startTime + this.envelope.attack);
-    gainNode.gain.exponentialRampToValueAtTime(this.envelope.sustain || 0.001, startTime + this.envelope.attack + this.envelope.decay);
+    gainNode.gain.linearRampToValueAtTime(peak, startTime + this.envelope.attack);
+    gainNode.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * (this.envelope.sustain || 0.001)), startTime + this.envelope.attack + this.envelope.decay);
 
     oscillator.connect(filterNode);
     filterNode.connect(gainNode);
