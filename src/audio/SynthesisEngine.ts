@@ -9,51 +9,89 @@ export interface EnvelopeParams {
   release: number;
 }
 
+export interface FilterParams {
+  cutoff: number;
+  resonance: number;
+}
+
 export interface Voice {
   oscillator: OscillatorNode;
   gainNode: GainNode;
+  filterNode: BiquadFilterNode;
   startTime: number;
   noteId: string | number;
 }
 
 export class SynthesisEngine {
-  private context: AudioContext;
-  private masterGain: GainNode;
+  private context: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
   private voices: Map<string | number, Voice[]> = new Map();
   private arpeggioIntervals: Map<string | number, number> = new Map();
   private totalVoices: number = 0;
   private maxVoices: number = 32;
+  
+  private waveform: Waveform = 'sawtooth';
   private envelope: EnvelopeParams = {
     attack: 0.05,
     decay: 0.2,
     sustain: 0.3,
     release: 1.0
   };
+  private filter: FilterParams = {
+    cutoff: 2000,
+    resonance: 1
+  };
 
-  constructor() {
-    this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.masterGain = this.context.createGain();
-    this.masterGain.connect(this.context.destination);
-    this.masterGain.gain.value = 0.5;
+  constructor() {}
+
+  private initContext() {
+    if (!this.context) {
+      this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.masterGain = this.context.createGain();
+      this.masterGain.connect(this.context.destination);
+      this.masterGain.gain.value = 0.5;
+    }
+    return this.context;
   }
 
   setVolume(value: number) {
-    this.masterGain.gain.setTargetAtTime(value, this.context.currentTime, 0.05);
+    if (this.masterGain && this.context) {
+      this.masterGain.gain.setTargetAtTime(value, this.context.currentTime, 0.05);
+    }
   }
 
   setEnvelope(params: Partial<EnvelopeParams>) {
     this.envelope = { ...this.envelope, ...params };
   }
 
+  setFilter(params: Partial<FilterParams>) {
+    this.filter = { ...this.filter, ...params };
+    this.voices.forEach(voiceList => {
+        voiceList.forEach(voice => {
+            if (this.context) {
+                voice.filterNode.frequency.setTargetAtTime(this.filter.cutoff, this.context.currentTime, 0.05);
+                voice.filterNode.Q.setTargetAtTime(this.filter.resonance, this.context.currentTime, 0.05);
+            }
+        });
+    });
+  }
+
+  setWaveform(type: Waveform) {
+    this.waveform = type;
+  }
+
   async resume() {
-    if (this.context.state === 'suspended') {
-      await this.context.resume();
+    const ctx = this.initContext();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
     }
   }
 
-  triggerNote(noteId: string | number, frequencies: number | number[], harmonyType: HarmonyType = 'none', waveform: Waveform = 'sawtooth') {
-    if (this.context.state === 'suspended') {
-      this.context.resume();
+  triggerNote(noteId: string | number, frequencies: number | number[], harmonyType: HarmonyType = 'none') {
+    const ctx = this.initContext();
+    
+    if (ctx.state === 'suspended') {
+      ctx.resume();
     }
 
     this.stopNote(noteId);
@@ -61,15 +99,16 @@ export class SynthesisEngine {
     const freqArray = Array.isArray(frequencies) ? frequencies : [frequencies];
     
     if (harmonyType === 'arpeggio') {
-      this.startArpeggio(noteId, freqArray, waveform);
+      this.startArpeggio(noteId, freqArray, this.waveform);
     } else {
-      this.playStaticHarmony(noteId, freqArray, waveform);
+      this.playStaticHarmony(noteId, freqArray, this.waveform);
     }
   }
 
   private playStaticHarmony(noteId: string | number, frequencies: number[], waveform: Waveform) {
     const noteVoices: Voice[] = [];
-    const now = this.context.currentTime;
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
 
     frequencies.forEach((freq) => {
       noteVoices.push(this.createVoice(noteId, freq, now, frequencies.length, waveform));
@@ -80,11 +119,13 @@ export class SynthesisEngine {
 
   private startArpeggio(noteId: string | number, frequencies: number[], waveform: Waveform) {
     let index = 0;
+    
     const playNext = () => {
       if (!this.arpeggioIntervals.has(noteId)) return;
 
       const freq = frequencies[index];
-      const now = this.context.currentTime;
+      const ctx = this.initContext();
+      const now = ctx.currentTime;
       const voice = this.createVoice(noteId, freq, now, 1, waveform);
       
       const currentVoices = this.voices.get(noteId) || [];
@@ -105,29 +146,38 @@ export class SynthesisEngine {
   }
 
   private createVoice(noteId: string | number, freq: number, startTime: number, div: number, waveform: Waveform): Voice {
+    const ctx = this.initContext();
+    const master = this.masterGain!;
+
     if (this.totalVoices >= this.maxVoices) {
       const firstKey = this.voices.keys().next().value;
       if (firstKey !== undefined) this.stopNote(firstKey);
     }
 
-    const oscillator = this.context.createOscillator();
-    const gainNode = this.context.createGain();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    const filterNode = ctx.createBiquadFilter();
 
     oscillator.type = waveform;
     oscillator.frequency.setValueAtTime(freq, startTime);
+
+    filterNode.type = 'lowpass';
+    filterNode.frequency.setValueAtTime(this.filter.cutoff, startTime);
+    filterNode.Q.setValueAtTime(this.filter.resonance, startTime);
 
     gainNode.gain.value = 0;
     gainNode.gain.setValueAtTime(0, startTime);
     gainNode.gain.linearRampToValueAtTime(0.4 / div, startTime + this.envelope.attack);
     gainNode.gain.exponentialRampToValueAtTime(this.envelope.sustain || 0.001, startTime + this.envelope.attack + this.envelope.decay);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(this.masterGain);
+    oscillator.connect(filterNode);
+    filterNode.connect(gainNode);
+    gainNode.connect(master);
 
     oscillator.start(startTime);
     this.totalVoices++;
 
-    return { oscillator, gainNode, startTime, noteId };
+    return { oscillator, gainNode, filterNode, startTime, noteId };
   }
 
   stopNote(noteId: string | number) {
@@ -138,7 +188,7 @@ export class SynthesisEngine {
     }
 
     const noteVoices = this.voices.get(noteId);
-    if (noteVoices) {
+    if (noteVoices && this.context) {
       const now = this.context.currentTime;
       noteVoices.forEach(voice => {
         try {

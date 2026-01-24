@@ -37,24 +37,25 @@ body {
     justify-content: center;
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
-    padding: 10px 20px;
+    padding: 8px 15px;
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    gap: 10px;
+    gap: 8px;
 }
 
 .top-bar h1 {
-    font-size: 1.5em;
+    font-size: 1.2em;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     margin: 0;
+    opacity: 0.8;
 }
 
 .top-bar-controls {
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 12px;
+    width: 100%;
 }
 
 .sidebar-left { grid-area: side-left; }
@@ -80,7 +81,7 @@ body {
     gap: 20px;
     overflow-y: auto;
     min-width: 0;
-    align-self: start; /* Compact vertical size */
+    align-self: start;
 }
 
 .control-group {
@@ -88,35 +89,127 @@ body {
     flex-direction: column;
     gap: 8px;
     width: 100%;
+    align-items: center;
 }
 
 .control-group.horizontal {
     flex-direction: row;
     align-items: center;
     width: auto;
-    gap: 15px;
+    gap: 8px;
 }
 
 .control-group label {
-    font-size: 0.7em;
+    font-size: 0.65em;
     text-transform: uppercase;
     letter-spacing: 1px;
     opacity: 0.7;
     white-space: nowrap;
 }
 
-.control-group.horizontal.octave-controls {
-    gap: 8px;
+.control-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 10px 0;
+    width: 100%;
 }
 
+.control-divider.vertical {
+    width: 1px;
+    height: 40px;
+    margin: 0 5px;
+}
+
+/* Dial Widget */
+.dial-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+}
+
+.dial {
+    width: 32px;
+    height: 32px;
+    background: #222;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    position: relative;
+    cursor: ns-resize;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.dial-indicator {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 2px;
+    height: 10px;
+    background: #4ECDC4;
+    transform-origin: 50% 12px;
+    border-radius: 1px;
+}
+
+.dial-value {
+    font-size: 0.6em;
+    font-family: monospace;
+    opacity: 0.6;
+}
+
+/* Vertical Slider (Master Volume in Top Bar) */
+.vertical-slider-container {
+    position: relative;
+    width: 24px;
+    height: 50px; /* Scaled to fit top-bar */
+    cursor: ns-resize;
+    display: flex;
+    justify-content: center;
+}
+
+.slider-track.vertical {
+    width: 8px;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.slider-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 50%;
+    background: #4ECDC4;
+}
+
+.slider-handle-v {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px;
+    height: 10px;
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 2;
+}
+
+/* Synth Row */
+.synth-dials-row {
+    display: flex;
+    gap: 15px;
+}
+
+/* Multi Range Slider */
 .multi-range-slider {
     position: relative;
-    width: 180px;
+    width: 100%;
     height: 30px;
     display: flex;
     align-items: center;
     cursor: pointer;
-    margin: 0 10px;
 }
 
 .slider-track {
@@ -129,26 +222,20 @@ body {
 
 .slider-handle {
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: white;
     border: 2px solid #1e3c72;
     transform: translateX(-50%);
     z-index: 2;
-    transition: transform 0.1s, box-shadow 0.2s;
-}
-
-.slider-handle:hover {
-    transform: translateX(-50%) scale(1.2);
-    box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 
 .slider-handle.bottom { background: #444; }
 .slider-handle.mid { background: #888; }
 .slider-handle.top { background: #ccc; }
 
-/* Root Grid Widget (Sidebar) */
+/* Root Grid Widget */
 .root-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -171,27 +258,26 @@ body {
     border-color: white;
 }
 
-/* Segmented Control (Vertical) */
+/* Segmented Control */
+.segmented-control {
+    display: flex;
+    background: rgba(0,0,0,0.3);
+    padding: 2px;
+    border-radius: 6px;
+}
+
 .segmented-control.vertical {
     flex-direction: column;
 }
 
-.segmented-control {
-    display: flex;
-    background: rgba(0,0,0,0.3);
-    padding: 4px;
-    border-radius: 8px;
-}
-
 .segment-btn {
-    flex: 1;
-    padding: 12px 5px;
+    padding: 8px 10px;
     border: none;
     background: transparent;
     color: white;
     cursor: pointer;
-    border-radius: 6px;
-    font-size: 0.8em;
+    border-radius: 4px;
+    font-size: 0.75em;
 }
 
 .segment-btn.active {
@@ -200,11 +286,12 @@ body {
 
 .modern-select {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
     color: white;
-    border-radius: 8px;
+    border-radius: 6px;
+    font-size: 0.85em;
 }
 
 #instrument {
@@ -218,18 +305,6 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     touch-action: none;
     flex: 0 1 auto;
-}
-
-#note-display {
-    width: 100%;
-    max-width: 600px;
-    font-size: 1.2em;
-    font-weight: bold;
-    padding: 10px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-    text-align: center;
-    min-height: 45px;
 }
 
 /* Unlock Overlay */
@@ -257,19 +332,9 @@ body {
     pointer-events: none;
 }
 
-.unlock-content {
-    text-align: center;
-}
-
-.unlock-content h1 {
-    font-size: 3em;
-    margin-bottom: 10px;
-}
-
-.unlock-content p {
-    opacity: 0.7;
-    margin-bottom: 30px;
-}
+.unlock-content { text-align: center; }
+.unlock-content h1 { font-size: 3em; margin-bottom: 10px; }
+.unlock-content p { opacity: 0.7; margin-bottom: 30px; }
 
 #start-btn {
     padding: 15px 40px;
@@ -279,12 +344,6 @@ body {
     color: white;
     border-radius: 30px;
     cursor: pointer;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
-}
-
-#start-btn:hover {
-    transform: scale(1.05);
 }
 
 /* Portrait Responsiveness */
@@ -303,20 +362,22 @@ body {
         gap: 5px;
     }
     
-    .sidebar { padding: 5px 10px; gap: 5px; background: rgba(255, 255, 255, 0.03); }
+    .sidebar { padding: 5px 10px; gap: 5px; background: rgba(255, 255, 255, 0.03); align-self: stretch; }
     .top-bar { padding: 5px 10px; gap: 5px; }
-    .top-bar h1 { font-size: 1.1em; }
-    .top-bar-controls { gap: 8px; }
+    .top-bar h1 { font-size: 1.0em; }
+    .top-bar-controls { gap: 8px; flex-wrap: nowrap; overflow-x: auto; width: 100%; justify-content: flex-start; }
     #note-display { display: none; }
-    .main-content { gap: 5px; }
+    .main-content { gap: 2px; }
     .control-group { gap: 4px; }
     
     #instrument { 
         max-width: 100%;
-        max-height: 45vh;
+        max-height: 40vh;
     }
     .root-grid { grid-template-columns: repeat(6, 1fr); gap: 2px; }
     .root-btn { padding: 4px 0; font-size: 0.7em; }
     .segmented-control.vertical { flex-direction: row; }
     .segment-btn { padding: 6px 2px; font-size: 0.7em; }
+    .synth-dials-row { gap: 5px; padding: 0; background: none; }
+    .vertical-slider-container { height: 40px; }
 }

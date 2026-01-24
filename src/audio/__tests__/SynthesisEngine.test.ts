@@ -26,6 +26,18 @@ class MockAudioContext {
     },
     type: 'sine'
   }));
+  createBiquadFilter = vi.fn(() => ({
+    connect: vi.fn(),
+    type: 'lowpass',
+    frequency: {
+      setValueAtTime: vi.fn(),
+      setTargetAtTime: vi.fn()
+    },
+    Q: {
+      setValueAtTime: vi.fn(),
+      setTargetAtTime: vi.fn()
+    }
+  }));
   resume = vi.fn(() => Promise.resolve());
 }
 
