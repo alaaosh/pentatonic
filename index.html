@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pentatonic Harmony Instrument</title>
-  <script type="module" crossorigin src="./assets/index-9GWSmi5f.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BkyDYpcH.css">
+  <script type="module" crossorigin src="./assets/index-3xxoMIam.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Bw0_rigY.css">
 </head>
 <body>
     <div id="audio-unlock" class="unlock-overlay">
@@ -17,20 +17,23 @@
     </div>
 
     <div class="app-layout">            <header class="top-bar">
-                <div class="control-group horizontal">
-                    <label>Volume</label>
-                    <input type="range" id="volume" min="0" max="100" value="50">
-                </div>
                 <h1>Pentatonic Synth</h1>
-                                        <div class="control-group horizontal octave-controls">
-                                            <label>Octave Range</label>
-                                            <div id="octave-slider" class="multi-range-slider">
-                                                <div class="slider-track"></div>
-                                                <div class="slider-handle bottom" data-key="bottom" title="Bottom Octave"></div>
-                                                <div class="slider-handle mid" data-key="mid" title="Middle Octave"></div>
-                                                <div class="slider-handle top" data-key="top" title="Top Octave"></div>
-                                            </div>
-                                        </div>            </header>
+                <div class="top-bar-controls">
+                    <div class="control-group horizontal">
+                        <label>Volume</label>
+                        <input type="range" id="volume" min="0" max="100" value="50">
+                    </div>
+                    <div class="control-group horizontal octave-controls">
+                        <label>Octave Range</label>
+                        <div id="octave-slider" class="multi-range-slider">
+                            <div class="slider-track"></div>
+                            <div class="slider-handle bottom" data-key="bottom" title="Bottom Octave"></div>
+                            <div class="slider-handle mid" data-key="mid" title="Middle Octave"></div>
+                            <div class="slider-handle top" data-key="top" title="Top Octave"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
     
             <aside class="sidebar sidebar-left">
                 <div class="control-group">
