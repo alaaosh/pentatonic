@@ -184,11 +184,14 @@ export class VisualRenderer {
   }
 
   getNoteAt(x: number, y: number): { index: number, octave: number } | null {
-    const area = this.noteAreas.find(a => 
+    const area = this.getAreaAt(x, y);
+    return area ? { index: area.index, octave: area.octave } : null;
+  }
+
+  getAreaAt(x: number, y: number): NoteArea | null {
+    return this.noteAreas.find(a => 
       x >= a.x && x < a.x + a.width &&
       y >= a.y && y < a.y + a.height
-    );
-
-    return area ? { index: area.index, octave: area.octave } : null;
+    ) || null;
   }
 }

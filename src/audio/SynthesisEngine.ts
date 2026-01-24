@@ -20,6 +20,7 @@ export interface Voice {
   filterNode: BiquadFilterNode;
   startTime: number;
   noteId: string | number;
+  baseFrequency: number;
 }
 
 export class SynthesisEngine {
@@ -89,13 +90,9 @@ export class SynthesisEngine {
 
   triggerNote(noteId: string | number, frequencies: number | number[], harmonyType: HarmonyType = 'none') {
     const ctx = this.initContext();
-    
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+    if (ctx.state === 'suspended') ctx.resume();
 
     this.stopNote(noteId);
-
     const freqArray = Array.isArray(frequencies) ? frequencies : [frequencies];
     
     if (harmonyType === 'arpeggio') {
@@ -103,6 +100,22 @@ export class SynthesisEngine {
     } else {
       this.playStaticHarmony(noteId, freqArray, this.waveform);
     }
+  }
+
+  modulateNote(noteId: string | number, pitchBend: number, timbre: number) {
+    const voiceList = this.voices.get(noteId);
+    if (!voiceList || !this.context) return;
+
+    const now = this.context.currentTime;
+    // pitchBend is in semitones (-1 to 1)
+    const pitchRatio = Math.pow(2, pitchBend / 12);
+    // timbre is 0 to 1, use it to shift cutoff up to +2 octaves
+    const filterFreq = this.filter.cutoff * (1 + timbre * 3);
+
+    voiceList.forEach(voice => {
+      voice.oscillator.frequency.setTargetAtTime(voice.baseFrequency * pitchRatio, now, 0.05);
+      voice.filterNode.frequency.setTargetAtTime(filterFreq, now, 0.05);
+    });
   }
 
   private playStaticHarmony(noteId: string | number, frequencies: number[], waveform: Waveform) {
@@ -119,28 +132,19 @@ export class SynthesisEngine {
 
   private startArpeggio(noteId: string | number, frequencies: number[], waveform: Waveform) {
     let index = 0;
-    
     const playNext = () => {
       if (!this.arpeggioIntervals.has(noteId)) return;
-
       const freq = frequencies[index];
       const ctx = this.initContext();
-      const now = ctx.currentTime;
-      const voice = this.createVoice(noteId, freq, now, 1, waveform);
-      
+      const voice = this.createVoice(noteId, freq, ctx.currentTime, 1, waveform);
       const currentVoices = this.voices.get(noteId) || [];
       currentVoices.push(voice);
       this.voices.set(noteId, currentVoices);
-
-      if (currentVoices.length > frequencies.length * 2) {
-          currentVoices.shift();
-      }
-
+      if (currentVoices.length > frequencies.length * 2) currentVoices.shift();
       index = (index + 1) % frequencies.length;
       const timer = window.setTimeout(playNext, 150);
       this.arpeggioIntervals.set(noteId, timer);
     };
-
     this.arpeggioIntervals.set(noteId, 0); 
     playNext();
   }
@@ -177,7 +181,7 @@ export class SynthesisEngine {
     oscillator.start(startTime);
     this.totalVoices++;
 
-    return { oscillator, gainNode, filterNode, startTime, noteId };
+    return { oscillator, gainNode, filterNode, startTime, noteId, baseFrequency: freq };
   }
 
   stopNote(noteId: string | number) {
@@ -196,9 +200,7 @@ export class SynthesisEngine {
           voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
           voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + this.envelope.release);
           voice.oscillator.stop(now + this.envelope.release);
-        } catch (e) {
-          // Ignore
-        }
+        } catch (e) {}
         this.totalVoices--;
       });
       this.voices.delete(noteId);

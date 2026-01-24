@@ -3,6 +3,7 @@ import { HarmonyType, ChordType } from '../audio/ScaleManager';
 export enum EventType {
   NOTE_ON = 'NOTE_ON',
   NOTE_OFF = 'NOTE_OFF',
+  NOTE_MODULATE = 'NOTE_MODULATE',
   PARAM_CHANGE = 'PARAM_CHANGE'
 }
 
@@ -18,6 +19,13 @@ export interface NoteOnEvent {
 export interface NoteOffEvent {
   index: number;
   octave: number;
+}
+
+export interface NoteModulateEvent {
+  index: number;
+  octave: number;
+  pitchBend: number; // -1 to 1 (semitones)
+  timbre: number;   // 0 to 1 (filter offset)
 }
 
 export interface ParamChangeEvent {

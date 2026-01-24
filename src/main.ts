@@ -5,7 +5,7 @@ import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { DialWidget } from './ui/DialWidget';
 import { VerticalSlider } from './ui/VerticalSlider';
-import { globalEvents, EventType, NoteOnEvent, NoteOffEvent } from './utils/EventProcessor';
+import { globalEvents, EventType, NoteOnEvent, NoteOffEvent, NoteModulateEvent } from './utils/EventProcessor';
 import './styles.css';
 
 // App State
@@ -37,18 +37,15 @@ const touch = new TouchHandler(canvas, renderer);
 
 // --- Widget Initializations ---
 
-// Master Volume Vertical Slider
 new VerticalSlider('volume-slider', 0.5, (v) => {
     audio.setVolume(v);
 });
 
-// Multi-handle Octave Slider
 new MultiRangeSlider('octave-slider', currentOctaves, (newValues) => {
     currentOctaves = { ...newValues };
     updateLayout();
 });
 
-// Synth Dials
 new DialWidget('dial-filter', {
     min: 100, max: 10000, step: 10, initialValue: 2000, label: 'Cutoff',
     onChange: (v) => audio.setFilter({ cutoff: v })
@@ -82,19 +79,13 @@ if (startBtn) {
 globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
     const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, data.octave);
     const rootNote = notes[data.index];
-    
     if (rootNote) {
         const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType, data.chordType);
         const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (data.octave - 4)));
-        
         const voiceId = `${data.index}-${data.octave}`;
         audio.triggerNote(voiceId, frequencies, data.harmonyType);
-        
-        if (noteDisplay) {
-            noteDisplay.textContent = `Playing: ${rootNote.name}${data.octave} (${data.harmonyType} ${data.chordType})`;
-        }
+        if (noteDisplay) noteDisplay.textContent = `Playing: ${rootNote.name}${data.octave}`;
     }
-    
     renderer.setActive(data.index, data.octave, true);
 });
 
@@ -102,14 +93,11 @@ globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
     const voiceId = `${data.index}-${data.octave}`;
     audio.stopNote(voiceId);
     renderer.setActive(data.index, data.octave, false);
-    
-    if (noteDisplay) {
-        setTimeout(() => {
-             if (noteDisplay.textContent?.startsWith('Playing')) {
-                 noteDisplay.textContent = 'Touch to play';
-             }
-        }, 500);
-    }
+});
+
+globalEvents.subscribe<NoteModulateEvent>(EventType.NOTE_MODULATE, (data) => {
+    const voiceId = `${data.index}-${data.octave}`;
+    audio.modulateNote(voiceId, data.pitchBend, data.timbre);
 });
 
 // --- Input Handling -> Event Emission ---
@@ -117,20 +105,27 @@ globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
 touch.onNoteStart = (noteIndex, octave) => {
     const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, noteIndex, octave);
     globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
-        index: noteIndex,
-        frequency: freq,
-        velocity: 1.0,
-        harmonyType: currentHarmony,
-        chordType: currentChordType,
-        octave: octave
+        index: noteIndex, frequency: freq, velocity: 1.0, 
+        harmonyType: currentHarmony, chordType: currentChordType, octave: octave
+    });
+};
+
+touch.onNoteModulate = (noteIndex, octave, relX, relY) => {
+    // relY: 0 (top) to 1 (bottom). Let's map center (0.5) to no bend.
+    // 0.5 to 0 -> 0 to +1 semitone
+    // 0.5 to 1 -> 0 to -1 semitone
+    const pitchBend = (0.5 - relY) * 2; // Range -1 to 1 semitones
+    
+    // relX: 0 (left) to 1 (right). 
+    const timbre = relX; // Range 0 to 1
+
+    globalEvents.emit<NoteModulateEvent>(EventType.NOTE_MODULATE, {
+        index: noteIndex, octave: octave, pitchBend, timbre
     });
 };
 
 touch.onNoteStop = (noteIndex, octave) => {
-    globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
-        index: noteIndex,
-        octave: octave
-    });
+    globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, { index: noteIndex, octave: octave });
 };
 
 // Helper to update the scale layout
@@ -185,13 +180,10 @@ if (waveformSelect) {
     });
 }
 
-// Initial Setup
 updateLayout();
 
 document.addEventListener('touchmove', (e) => {
-    if (e.target === canvas) {
-        e.preventDefault();
-    }
+    if (e.target === canvas) e.preventDefault();
 }, { passive: false });
 
 console.log('Pentatonic Synth Initialized');
