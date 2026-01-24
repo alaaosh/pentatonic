@@ -140,7 +140,12 @@ export class SynthesisEngine {
       const currentVoices = this.voices.get(noteId) || [];
       currentVoices.push(voice);
       this.voices.set(noteId, currentVoices);
-      if (currentVoices.length > frequencies.length * 2) currentVoices.shift();
+      
+      // Keep arpeggio tail short and release orphaned voices
+      if (currentVoices.length > frequencies.length) {
+        const oldVoice = currentVoices.shift();
+        if (oldVoice) this.releaseVoice(oldVoice, ctx.currentTime);
+      }
       index = (index + 1) % frequencies.length;
       const timer = window.setTimeout(playNext, 150);
       this.arpeggioIntervals.set(noteId, timer);
@@ -155,7 +160,13 @@ export class SynthesisEngine {
 
     if (this.totalVoices >= this.maxVoices) {
       const firstKey = this.voices.keys().next().value;
-      if (firstKey !== undefined) this.stopNote(firstKey);
+      if (firstKey !== undefined) {
+        const voicesToRelease = this.voices.get(firstKey);
+        if (voicesToRelease) {
+          voicesToRelease.forEach(v => this.releaseVoice(v, ctx.currentTime));
+          this.voices.delete(firstKey);
+        }
+      }
     }
 
     const oscillator = ctx.createOscillator();
@@ -185,6 +196,18 @@ export class SynthesisEngine {
     return { oscillator, gainNode, filterNode, startTime, noteId, baseFrequency: freq };
   }
 
+  private releaseVoice(voice: Voice, now: number) {
+    try {
+      voice.gainNode.gain.cancelScheduledValues(now);
+      voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
+      voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + this.envelope.release);
+      voice.oscillator.stop(now + this.envelope.release);
+      this.totalVoices--;
+    } catch (e) {
+      console.warn('Error releasing voice:', e);
+    }
+  }
+
   stopNote(noteId: string | number) {
     const interval = this.arpeggioIntervals.get(noteId);
     if (interval !== undefined) {
@@ -195,15 +218,7 @@ export class SynthesisEngine {
     const noteVoices = this.voices.get(noteId);
     if (noteVoices && this.context) {
       const now = this.context.currentTime;
-      noteVoices.forEach(voice => {
-        try {
-          voice.gainNode.gain.cancelScheduledValues(now);
-          voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
-          voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + this.envelope.release);
-          voice.oscillator.stop(now + this.envelope.release);
-        } catch (e) {}
-        this.totalVoices--;
-      });
+      noteVoices.forEach(voice => this.releaseVoice(voice, now));
       this.voices.delete(noteId);
     }
   }
