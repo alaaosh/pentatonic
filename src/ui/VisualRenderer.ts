@@ -25,7 +25,7 @@ export class VisualRenderer {
   
   // Store state for resize recalculations
   private currentNotes: PentatonicNote[] = [];
-  private currentOctaves: OctaveSettings | null = null;
+  public currentOctaves: OctaveSettings | null = null;
 
   private readonly COLORS = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'
