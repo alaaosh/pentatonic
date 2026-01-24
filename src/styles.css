@@ -34,28 +34,33 @@ body {
     grid-area: top-bar;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
-    padding: 8px 15px;
+    padding: 10px 15px;
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    gap: 8px;
+    gap: 12px;
 }
 
 .top-bar h1 {
+    display: block;
+    width: 100%;
+    text-align: center;
     font-size: 1.2em;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    margin: 0;
+    margin: 0 0 5px 0;
     opacity: 0.8;
 }
 
 .top-bar-controls {
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: stretch;
-    gap: 12px;
+    gap: 20px;
     width: 100%;
+    flex-wrap: nowrap;
 }
 
 .vol-group {
@@ -64,7 +69,9 @@ body {
 
 .tone-shaping-group {
     display: flex;
-    align-items: flex-end;
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 12px;
 }
 
@@ -94,12 +101,17 @@ body {
     align-self: start;
 }
 
+.sidebar .control-group {
+    width: 100%;
+}
+
 .control-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
+    width: auto;
     align-items: center;
+    justify-content: space-between;
 }
 
 .control-group.horizontal {
@@ -126,7 +138,8 @@ body {
 
 .control-divider.vertical {
     width: 1px;
-    height: 40px;
+    height: auto;
+    align-self: stretch;
     margin: 0 5px;
 }
 
@@ -210,7 +223,10 @@ body {
 /* Synth Row */
 .synth-dials-row {
     display: flex;
-    gap: 15px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
 }
 
 /* Multi Range Slider */
@@ -358,12 +374,7 @@ body {
     cursor: pointer;
 }
 
-@media (max-width: 1000px) {
-    .tone-shaping-group {
-        flex-direction: column;
-        align-items: center;
-        gap: 5px;
-    }
+@media (max-width: 800px) {
     .inner-divider {
         display: none;
     }
@@ -397,8 +408,15 @@ body {
         max-width: 100%;
         max-height: 40vh;
     }
-    .root-grid { grid-template-columns: repeat(6, 1fr); gap: 2px; }
-    .root-btn { padding: 4px 0; font-size: 0.7em; }
+    .root-grid { grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; }
+    .root-btn { 
+        padding: 0; 
+        aspect-ratio: 1 / 1; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        font-size: 0.8em; 
+    }
     .segmented-control.vertical { flex-direction: row; }
     .segment-btn { padding: 6px 2px; font-size: 0.7em; }
     .synth-dials-row { gap: 5px; padding: 0; background: none; flex-wrap: wrap; justify-content: center; }
