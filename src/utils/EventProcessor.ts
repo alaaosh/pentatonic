@@ -12,10 +12,12 @@ export interface NoteOnEvent {
   velocity: number;
   harmonyType: HarmonyType;
   chordType: ChordType;
+  octave: number;
 }
 
 export interface NoteOffEvent {
   index: number;
+  octave: number;
 }
 
 export interface ParamChangeEvent {
