@@ -80,6 +80,7 @@ body {
     gap: 20px;
     overflow-y: auto;
     min-width: 0;
+    align-self: start;
 }
 
 .control-group {
@@ -298,19 +299,21 @@ body {
         grid-template-columns: 100%;
         grid-template-rows: auto 1fr auto auto;
         height: 100vh;
-        padding: 8px;
-        gap: 8px;
+        padding: 5px;
+        gap: 5px;
     }
     
-    .sidebar { padding: 8px; gap: 8px; }
+    .sidebar { padding: 5px 10px; gap: 5px; background: rgba(255, 255, 255, 0.03); }
     .top-bar { padding: 5px 10px; gap: 5px; }
     .top-bar h1 { font-size: 1.1em; }
-    .top-bar-controls { gap: 10px; }
+    .top-bar-controls { gap: 8px; }
     #note-display { display: none; }
+    .main-content { gap: 5px; }
+    .control-group { gap: 4px; }
     
     #instrument { 
         max-width: 100%;
-        max-height: 50vh;
+        max-height: 45vh;
     }
     .root-grid { grid-template-columns: repeat(6, 1fr); gap: 2px; }
     .root-btn { padding: 4px 0; font-size: 0.7em; }
