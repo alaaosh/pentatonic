@@ -10,22 +10,48 @@
     <div class="container">
         <h1>Pentatonic Harmony Touch Instrument</h1>
         <div class="controls">
-            <label for="key-select">Key:</label>
-            <select id="key-select">
-                <option value="C">C Major</option>
-                <option value="G">G Major</option>
-                <option value="D">D Major</option>
-                <option value="A">A Major</option>
-                <option value="E">E Major</option>
-                <option value="F">F Major</option>
+            <label for="root-select">Root:</label>
+            <select id="root-select">
+                <option value="C">C</option>
+                <option value="C#">C#</option>
+                <option value="D">D</option>
+                <option value="D#">D#</option>
+                <option value="E">E</option>
+                <option value="F">F</option>
+                <option value="F#">F#</option>
+                <option value="G">G</option>
+                <option value="G#">G#</option>
+                <option value="A">A</option>
+                <option value="A#">A#</option>
+                <option value="B">B</option>
+            </select>
+
+            <label for="scale-select">Scale:</label>
+            <select id="scale-select">
+                <option value="major">Major Pentatonic</option>
+                <option value="minor">Minor Pentatonic</option>
+                <option value="blues">Blues</option>
+                <option value="yo">Yo (Japanese)</option>
+                <option value="hirajoshi">Hirajoshi</option>
             </select>
             
-            <label for="harmony-type">Harmony Type:</label>
+            <label for="harmony-type">Harmony:</label>
             <select id="harmony-type">
                 <option value="none">Single Note</option>
                 <option value="chord" selected>Full Chords</option>
                 <option value="power">Power Chords</option>
                 <option value="arpeggio">Arpeggios</option>
+            </select>
+
+            <label for="chord-type">Chord Type:</label>
+            <select id="chord-type">
+                <option value="maj7">Major 7th</option>
+                <option value="min7">Minor 7th</option>
+                <option value="dom7">Dominant 7th</option>
+                <option value="maj9">Major 9th</option>
+                <option value="min9">Minor 9th</option>
+                <option value="sus4">Suspended 4th</option>
+                <option value="dim7">Diminished 7th</option>
             </select>
             
             <label for="volume">Volume:</label>

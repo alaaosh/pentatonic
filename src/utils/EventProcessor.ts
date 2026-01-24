@@ -1,4 +1,4 @@
-import { HarmonyType } from '../audio/ScaleManager';
+import { HarmonyType, ChordType } from '../audio/ScaleManager';
 
 export enum EventType {
   NOTE_ON = 'NOTE_ON',
@@ -11,6 +11,7 @@ export interface NoteOnEvent {
   frequency: number;
   velocity: number;
   harmonyType: HarmonyType;
+  chordType: ChordType;
 }
 
 export interface NoteOffEvent {
