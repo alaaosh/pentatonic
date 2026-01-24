@@ -33,26 +33,29 @@ const touch = new TouchHandler(canvas, renderer);
 // --- Subscriptions ---
 
 globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
-    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
+    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, data.octave);
     const rootNote = notes[data.index];
     
     if (rootNote) {
         const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType, data.chordType);
-        const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave));
+        const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (data.octave - 4)));
         
-        audio.triggerNote(data.index, frequencies, data.harmonyType);
+        // We need a unique ID for synthesis that includes octave to allow polyphonic octaves
+        const voiceId = `${data.index}-${data.octave}`;
+        audio.triggerNote(voiceId, frequencies, data.harmonyType);
         
         if (noteDisplay) {
-            noteDisplay.textContent = `Playing: ${rootNote.name} (${data.harmonyType} ${data.chordType})`;
+            noteDisplay.textContent = `Playing: ${rootNote.name}${data.octave} (${data.harmonyType} ${data.chordType})`;
         }
     }
     
-    renderer.setActive(data.index, true);
+    renderer.setActive(data.index, data.octave, true);
 });
 
 globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
-    audio.stopNote(data.index);
-    renderer.setActive(data.index, false);
+    const voiceId = `${data.index}-${data.octave}`;
+    audio.stopNote(voiceId);
+    renderer.setActive(data.index, data.octave, false);
     
     if (noteDisplay) {
         setTimeout(() => {
@@ -65,27 +68,29 @@ globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
 
 // --- Input Handling -> Event Emission ---
 
-touch.onNoteStart = (noteIndex) => {
-    const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, noteIndex, currentOctave);
+touch.onNoteStart = (noteIndex, octave) => {
+    const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, noteIndex, octave);
     globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
         index: noteIndex,
         frequency: freq,
         velocity: 1.0,
         harmonyType: currentHarmony,
-        chordType: currentChordType
+        chordType: currentChordType,
+        octave: octave
     });
 };
 
-touch.onNoteStop = (noteIndex) => {
+touch.onNoteStop = (noteIndex, octave) => {
     globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
-        index: noteIndex
+        index: noteIndex,
+        octave: octave
     });
 };
 
 // Helper to update the scale layout
 const updateLayout = () => {
     const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
-    renderer.updateLayout(notes);
+    renderer.updateLayout(notes, currentOctave);
 };
 
 // UI Controls Listeners

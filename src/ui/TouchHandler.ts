@@ -1,11 +1,16 @@
 import { VisualRenderer } from './VisualRenderer';
 
-export type TouchCallback = (noteIndex: number) => void;
+export type TouchCallback = (noteIndex: number, octave: number) => void;
+
+interface ActiveTouch {
+  index: number;
+  octave: number;
+}
 
 export class TouchHandler {
   private canvas: HTMLCanvasElement;
   private renderer: VisualRenderer;
-  private activeTouches: Map<number | string, number> = new Map(); // touchId -> noteIndex
+  private activeTouches: Map<number | string, ActiveTouch> = new Map(); // touchId -> ActiveTouch
   
   public onNoteStart?: TouchCallback;
   public onNoteStop?: TouchCallback;
@@ -46,7 +51,7 @@ export class TouchHandler {
     const noteIndex = this.keyMap[e.key];
     if (noteIndex !== undefined) {
       this.activeKeys.add(e.key);
-      this.onNoteStart?.(noteIndex);
+      this.onNoteStart?.(noteIndex, 4); // Default to octave 4 for keyboard
     }
   }
 
@@ -54,15 +59,15 @@ export class TouchHandler {
     const noteIndex = this.keyMap[e.key];
     if (noteIndex !== undefined) {
       this.activeKeys.delete(e.key);
-      this.onNoteStop?.(noteIndex);
+      this.onNoteStop?.(noteIndex, 4);
     }
   }
 
-  private getNoteIndex(clientX: number, clientY: number): number {
+  private getNote(clientX: number, clientY: number): ActiveTouch | null {
     const rect = this.canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    return this.renderer.getNoteIndexAt(x, y);
+    return this.renderer.getNoteAt(x, y);
   }
 
   // --- Touch Handlers ---
@@ -71,11 +76,11 @@ export class TouchHandler {
     e.preventDefault();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
-      const noteIndex = this.getNoteIndex(touch.clientX, touch.clientY);
+      const result = this.getNote(touch.clientX, touch.clientY);
       
-      if (noteIndex !== -1) {
-        this.activeTouches.set(touch.identifier, noteIndex);
-        this.onNoteStart?.(noteIndex);
+      if (result) {
+        this.activeTouches.set(touch.identifier, result);
+        this.onNoteStart?.(result.index, result.octave);
       }
     }
   }
@@ -84,23 +89,18 @@ export class TouchHandler {
     e.preventDefault();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
-      const oldNoteIndex = this.activeTouches.get(touch.identifier);
-      const newNoteIndex = this.getNoteIndex(touch.clientX, touch.clientY);
+      const oldTouch = this.activeTouches.get(touch.identifier);
+      const newTouch = this.getNote(touch.clientX, touch.clientY);
 
-      // If we moved to a new valid note
-      if (newNoteIndex !== -1 && newNoteIndex !== oldNoteIndex) {
-        // Stop old note if it existed
-        if (oldNoteIndex !== undefined && oldNoteIndex !== -1) {
-          this.onNoteStop?.(oldNoteIndex);
+      if (newTouch && (!oldTouch || newTouch.index !== oldTouch.index || newTouch.octave !== oldTouch.octave)) {
+        if (oldTouch) {
+          this.onNoteStop?.(oldTouch.index, oldTouch.octave);
         }
-        
-        // Start new note
-        this.activeTouches.set(touch.identifier, newNoteIndex);
-        this.onNoteStart?.(newNoteIndex);
+        this.activeTouches.set(touch.identifier, newTouch);
+        this.onNoteStart?.(newTouch.index, newTouch.octave);
       } 
-      // If we moved off the instrument completely
-      else if (newNoteIndex === -1 && oldNoteIndex !== undefined) {
-         this.onNoteStop?.(oldNoteIndex);
+      else if (!newTouch && oldTouch) {
+         this.onNoteStop?.(oldTouch.index, oldTouch.octave);
          this.activeTouches.delete(touch.identifier);
       }
     }
@@ -110,10 +110,10 @@ export class TouchHandler {
     e.preventDefault();
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
-      const noteIndex = this.activeTouches.get(touch.identifier);
+      const oldTouch = this.activeTouches.get(touch.identifier);
       
-      if (noteIndex !== undefined) {
-        this.onNoteStop?.(noteIndex);
+      if (oldTouch) {
+        this.onNoteStop?.(oldTouch.index, oldTouch.octave);
         this.activeTouches.delete(touch.identifier);
       }
     }
@@ -123,33 +123,33 @@ export class TouchHandler {
 
   private handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return; // Only left click
-    const noteIndex = this.getNoteIndex(e.clientX, e.clientY);
-    if (noteIndex !== -1) {
-      this.activeTouches.set('mouse', noteIndex);
-      this.onNoteStart?.(noteIndex);
+    const result = this.getNote(e.clientX, e.clientY);
+    if (result) {
+      this.activeTouches.set('mouse', result);
+      this.onNoteStart?.(result.index, result.octave);
     }
   }
 
   private handleMouseMove(e: MouseEvent) {
     if (!this.activeTouches.has('mouse')) return;
 
-    const oldNoteIndex = this.activeTouches.get('mouse') as number;
-    const newNoteIndex = this.getNoteIndex(e.clientX, e.clientY);
+    const oldTouch = this.activeTouches.get('mouse') as ActiveTouch;
+    const newTouch = this.getNote(e.clientX, e.clientY);
 
-    if (newNoteIndex !== -1 && newNoteIndex !== oldNoteIndex) {
-      this.onNoteStop?.(oldNoteIndex);
-      this.activeTouches.set('mouse', newNoteIndex);
-      this.onNoteStart?.(newNoteIndex);
-    } else if (newNoteIndex === -1) {
-      this.onNoteStop?.(oldNoteIndex);
+    if (newTouch && (newTouch.index !== oldTouch.index || newTouch.octave !== oldTouch.octave)) {
+      this.onNoteStop?.(oldTouch.index, oldTouch.octave);
+      this.activeTouches.set('mouse', newTouch);
+      this.onNoteStart?.(newTouch.index, newTouch.octave);
+    } else if (!newTouch) {
+      this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.delete('mouse');
     }
   }
 
   private handleMouseUp(_e: MouseEvent) {
-    const noteIndex = this.activeTouches.get('mouse') as number;
-    if (noteIndex !== undefined) {
-      this.onNoteStop?.(noteIndex);
+    const oldTouch = this.activeTouches.get('mouse');
+    if (oldTouch) {
+      this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.delete('mouse');
     }
   }

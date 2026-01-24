@@ -2,6 +2,7 @@ import { PentatonicNote } from '../audio/ScaleManager';
 
 export interface NoteArea {
   index: number;
+  octave: number;
   x: number;
   y: number;
   width: number;
@@ -14,7 +15,7 @@ export class VisualRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private noteAreas: NoteArea[] = [];
-  private activeNotes: Set<number> = new Set();
+  private activeNotes: Set<string> = new Set(); // Using "index-octave" as key
   
   private readonly COLORS = [
     '#FF6B6B', // Red
@@ -30,74 +31,70 @@ export class VisualRenderer {
     if (!context) throw new Error('Could not get 2D context');
     this.ctx = context;
     
-    // Handle high DPI displays
-    this.setupHighDPI();
-    
-    // Initial resize
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
 
   private setupHighDPI() {
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.style.width = this.canvas.width + 'px';
-    this.canvas.style.height = this.canvas.height + 'px';
-    this.canvas.width = this.canvas.width * dpr;
-    this.canvas.height = this.canvas.height * dpr;
+    const rect = this.canvas.getBoundingClientRect();
+    
+    // Set internal resolution
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    
+    // Reset transform then scale
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(dpr, dpr);
   }
 
   resize() {
-    // Get parent container dimensions or fallback to window
-    const container = this.canvas.parentElement;
-    if (container) {
-      // We want the canvas to fit the container or have a fixed aspect ratio
-      // For now, let's just match the container's width and set a fixed height or aspect ratio
-      // But looking at legacy code, it seemed to rely on CSS. 
-      // Let's rely on the CSS sizing and just update the internal resolution.
-      
-      const rect = this.canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      
-      this.canvas.width = rect.width * dpr;
-      this.canvas.height = rect.height * dpr;
-      
-      this.ctx.scale(dpr, dpr);
-      
-      // Re-calculate areas if we have notes
-      if (this.noteAreas.length > 0) {
-        // We need the original notes to recalculate. 
-        // This is a bit tricky since we only stored NoteAreas.
-        // We'll rely on the consumer calling updateLayout again or we store the notes.
-        // Ideally, updateLayout is called after resize.
-      }
-    }
+    this.setupHighDPI();
+    this.render();
   }
 
-  updateLayout(notes: PentatonicNote[]) {
+  updateLayout(notes: PentatonicNote[], baseOctave: number) {
     const rect = this.canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
     const noteWidth = width / notes.length;
 
-    this.noteAreas = notes.map((note, index) => ({
-      index,
-      note,
-      x: index * noteWidth,
-      y: 0,
-      width: noteWidth,
-      height: height,
-      color: this.COLORS[index % this.COLORS.length]
-    }));
+    // Split heights: Top 25% (+1), Center 50% (base), Bottom 25% (-1)
+    const heights = [
+        { pct: 0.25, offset: 1 },
+        { pct: 0.5, offset: 0 },
+        { pct: 0.25, offset: -1 }
+    ];
+
+    this.noteAreas = [];
+    
+    notes.forEach((note, noteIndex) => {
+        let currentY = 0;
+        heights.forEach((h) => {
+            const areaHeight = height * h.pct;
+            this.noteAreas.push({
+                index: noteIndex,
+                octave: baseOctave + h.offset,
+                x: noteIndex * noteWidth,
+                y: currentY,
+                width: noteWidth,
+                height: areaHeight,
+                color: this.COLORS[noteIndex % this.COLORS.length],
+                note: note
+            });
+            currentY += areaHeight;
+        });
+    });
 
     this.render();
   }
 
-  setActive(noteIndex: number, isActive: boolean) {
+  setActive(noteIndex: number, octave: number, isActive: boolean) {
+    const key = `${noteIndex}-${octave}`;
     if (isActive) {
-      this.activeNotes.add(noteIndex);
+      this.activeNotes.add(key);
     } else {
-      this.activeNotes.delete(noteIndex);
+      this.activeNotes.delete(key);
     }
     this.render();
   }
@@ -112,55 +109,60 @@ export class VisualRenderer {
     const width = rect.width;
     const height = rect.height;
 
-    // Clear canvas
     this.ctx.clearRect(0, 0, width, height);
 
-    this.noteAreas.forEach(area => {
-      // Draw background
-      this.ctx.fillStyle = area.color;
+    this.noteAreas.forEach((area) => {
+      const key = `${area.index}-${area.octave}`;
+      const isActive = this.activeNotes.has(key);
+
+      // Distinguish octaves visually: brightness
+      const baseOctave = this.noteAreas[1]?.octave || 4;
+      const brightnessShift = (area.octave - baseOctave) * 15;
+      
+      this.ctx.fillStyle = this.adjustBrightness(area.color, brightnessShift);
       this.ctx.fillRect(area.x, area.y, area.width, area.height);
 
       // Draw active highlight
-      if (this.activeNotes.has(area.index)) {
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      if (isActive) {
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         this.ctx.fillRect(area.x, area.y, area.width, area.height);
       }
 
       // Draw border
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      this.ctx.lineWidth = 1;
       this.ctx.strokeRect(area.x, area.y, area.width, area.height);
 
-      // Draw Text
+      // Draw Label
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       const centerX = area.x + area.width / 2;
       const centerY = area.y + area.height / 2;
 
-      // Note Name
-      this.ctx.font = 'bold 48px Arial';
+      this.ctx.font = area.height < 60 ? 'bold 14px Arial' : 'bold 24px Arial';
       
-      // Shadow
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      this.ctx.fillText(area.note.name, centerX + 2, centerY + 2);
-      
-      // Main text
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.fillText(`${area.note.name}${area.octave}`, centerX + 1, centerY + 1);
       this.ctx.fillStyle = 'white';
-      this.ctx.fillText(area.note.name, centerX, centerY);
+      this.ctx.fillText(`${area.note.name}${area.octave}`, centerX, centerY);
     });
   }
 
-  // Helper for TouchHandler to hit-test
-  getNoteIndexAt(x: number, _y: number): number {
-    // Simple column-based hit testing since y is always full height
-    // normalized x (0-1) would be easier, but let's map pixels.
-    // We assume the caller gives us coordinates relative to the canvas client rect.
-    
-    // Find the area
+  private adjustBrightness(hex: string, percent: number) {
+    const num = parseInt(hex.replace('#', ''), 16),
+      amt = Math.round(2.55 * percent),
+      R = (num >> 16) + amt,
+      G = (num >> 8 & 0x00FF) + amt,
+      B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+
+  getNoteAt(x: number, y: number): { index: number, octave: number } | null {
     const area = this.noteAreas.find(a => 
-      x >= a.x && x < a.x + a.width
+      x >= a.x && x < a.x + a.width &&
+      y >= a.y && y < a.y + a.height
     );
 
-    return area ? area.index : -1;
+    return area ? { index: area.index, octave: area.octave } : null;
   }
 }
