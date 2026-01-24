@@ -20,6 +20,8 @@ graph TB
     subgraph "Core Logic"
         F[ScaleManager]
         G[MultiRangeSlider]
+        H[DialWidget]
+        I[VerticalSlider]
     end
     
     D --> F
@@ -29,75 +31,55 @@ graph TB
 
 ### 2.1. Layers
 
-- **Touch Interface Layer**: Captures multi-touch and mouse input across a 5x3 grid (5 notes x 3 octave zones).
-- **Event Processing Layer**: Uses a global Pub/Sub bus (`EventProcessor`) to broadcast `NOTE_ON`, `NOTE_OFF`, and `PARAM_CHANGE` events.
-- **Audio Engine Layer**: Manages polyphonic synthesis, chromatic harmonic expansion, and looping arpeggiation.
+- **Touch Interface Layer**: Captures multi-touch and mouse input across a 5x3 grid. Supports microtonal expression via vertical (Pitch) and horizontal (Timbre) sliding.
+- **Event Processing Layer**: Uses a global Pub/Sub bus (`EventProcessor`) to broadcast `NOTE_ON`, `NOTE_OFF`, and `NOTE_MODULATE` events.
+- **Audio Engine Layer**: Manages polyphonic synthesis, chromatic harmonic expansion, and real-time parameter modulation.
 - **Visual Feedback Layer**: High-performance Canvas renderer with responsive high-DPI scaling and octave-based brightness distinction.
 
 ## 3. Components and Interfaces
 
 ### 3.1. ScaleManager (Static Utility)
-**Purpose**: The central musical intelligence of the synth.
-- Maps 12 chromatic roots and 5 scale types (Major, Minor, Blues, Yo, Hirajoshi).
-- Provides `generateHarmony()` which expands a single pentatonic trigger into complex chromatic structures (Maj7, Min9, etc.).
-- Calculates mathematically precise frequencies based on semitone ratios.
+- Maps 12 chromatic roots and 5 scale types.
+- Provides `generateHarmony()` for chromatic expansion (Maj7, Min9, etc.).
 
 ### 3.2. SynthesisEngine
-**Purpose**: Manages the Web Audio API context and voice allocation.
-- **Lazy Initialization**: Context is created and resumed only after an explicit user gesture (Start Overlay).
-- **Polyphonic Voice Pool**: Manages up to 32 simultaneous oscillators with ADSR envelopes.
-- **Advanced Modes**: Supports static chord stacks and dynamic looping arpeggiators.
+- **Lazy Initialization**: AudioContext created only after user gesture.
+- **Polyphonic Modulation**: Supports real-time per-voice pitch bending ($\pm 1$ semitone) and filter cutoff shaping.
+- **Signal Chain**: Oscillator $\rightarrow$ Low-pass Filter $\rightarrow$ VCA (Envelope) $\rightarrow$ Master Gain.
 
 ### 3.3. VisualRenderer
-**Purpose**: Renders the instrument interface at 60fps.
-- **Octave Split**: Implements a 25%/50%/25% vertical height split for the 3-octave regions.
-- **High-DPI Support**: Automatically adjusts internal resolution to match device pixel density.
-- **Dynamic Shading**: Uses brightness shifts to visually distinguish between different octave rows.
+- **Octave Split**: 25%/50%/25% vertical layout.
+- **Responsive Logic**: MutationObserver-based recalculations for fluid window resizing.
 
-### 3.4. TouchHandler
-**Purpose**: Normalizes input from diverse sources.
-- Handles Multi-touch, Mouse (with Glissando), and Keyboard (`A-G`).
-- Translates screen coordinates into specific `{ noteIndex, octave }` pairs using the renderer's layout data.
-
-### 3.5. MultiRangeSlider
-**Purpose**: Custom UI widget for range control.
-- Manages three independent handles on a single track.
-- Used for mapping the Top, Middle, and Bottom UI rows to arbitrary octaves.
+### 3.4. Specialized Widgets
+- **MultiRangeSlider**: Independent control of three octave pegs.
+- **DialWidget**: NS-resize based knobs for synthesis parameters.
+- **VerticalSlider**: Dedicated high-resolution volume control.
 
 ## 4. Data Models
 
-### NoteOnEvent
+### NoteModulateEvent
 ```typescript
 {
-  index: number;        // Pentatonic index (0-4)
-  octave: number;       // Triggered octave (1-8)
-  frequency: number;    // Calculated root frequency
-  velocity: number;     // Trigger intensity
-  harmonyType: string;  // 'none', 'chord', 'power', 'arpeggio'
-  chordType: string;    // 'maj7', 'min9', 'sus4', etc.
+  index: number;        // Note index
+  octave: number;       // Triggered octave
+  pitchBend: number;    // -1 to 1 semitones
+  timbre: number;       // 0 to 1 filter offset
 }
 ```
 
-### InterfaceLayout (NoteArea)
-```typescript
-{
-  index: number;        // Pentatonic note index
-  octave: number;       // Row-specific octave
-  x, y, width, height: number; // Pixel coordinates
-  color: string;        // Assigned note color
-}
-```
+## 5. Future Roadmap (Tone Shaping Suggestions)
 
-## 5. Performance & UX
+### 5.1. LFO Engine (Movement)
+- Implement a Low-Frequency Oscillator to modulate Pitch (Vibrato) or Filter (Tremolo/Auto-wah).
+- Add "Depth" and "Rate" dials to the dashboard.
 
-- **Autoplay Compliance**: A "Start" overlay ensures the instrument is only activated after a deliberate user action, preventing browser audio blocking.
-- **Responsive Workspace**:
-    - **Landscape**: Three-column grid optimizing sidebar accessibility.
-    - **Portrait**: Stacked layout ensuring the instrument remains finger-scaled (approx. 120px per key).
-- **Latency**: Audio triggers targets < 20ms response time using the Web Audio API's `currentTime` scheduling.
+### 5.2. Filter Resonance Control
+- Add a dedicated Dial for Filter Q (Resonance) to allow for sharper, "squelchy" electronic sounds.
 
-## 6. Testing Strategy
+### 5.3. Modulation Visuals
+- Update the VisualRenderer to show a "glow" or "ripple" effect that moves with the finger during pitch and timbre modulation.
 
-- **Property-Based Testing**: Validates that all scale/root combinations maintain correct musical intervals.
-- **Unit Testing**: Ensures robust voice recycling and arpeggiator cleanup in the SynthesisEngine.
-- **Responsive Verification**: Verified against both desktop (Firefox/Chrome) and mobile viewport simulations.
+## 6. Testing & Compliance
+- **Autoplay Compliance**: "Start Instrument" overlay ensures valid user gesture.
+- **Responsive Workspace**: Landscape grid vs. Portrait stack (minimized gaps).

@@ -38,27 +38,42 @@ export class TouchHandler {
     window.addEventListener('keyup', this.handleKeyUp.bind(this));
   }
 
-  private keyMap: Record<string, number> = {
-    'a': 0, 's': 1, 'd': 2, 'f': 3, 'g': 4,
-    'A': 0, 'S': 1, 'D': 2, 'F': 3, 'G': 4
+  private keyMap: Record<string, { index: number, row: number }> = {
+    'q': { index: 0, row: 0 }, 'w': { index: 1, row: 0 }, 'e': { index: 2, row: 0 }, 'r': { index: 3, row: 0 }, 't': { index: 4, row: 0 },
+    'a': { index: 0, row: 1 }, 's': { index: 1, row: 1 }, 'd': { index: 2, row: 1 }, 'f': { index: 3, row: 1 }, 'g': { index: 4, row: 1 },
+    'z': { index: 0, row: 2 }, 'x': { index: 1, row: 2 }, 'c': { index: 2, row: 2 }, 'v': { index: 3, row: 2 }, 'b': { index: 4, row: 2 },
+    // Caps support
+    'Q': { index: 0, row: 0 }, 'W': { index: 1, row: 0 }, 'E': { index: 2, row: 0 }, 'R': { index: 3, row: 0 }, 'T': { index: 4, row: 0 },
+    'A': { index: 0, row: 1 }, 'S': { index: 1, row: 1 }, 'D': { index: 2, row: 1 }, 'F': { index: 3, row: 1 }, 'G': { index: 4, row: 1 },
+    'Z': { index: 0, row: 2 }, 'X': { index: 1, row: 2 }, 'C': { index: 2, row: 2 }, 'V': { index: 3, row: 2 }, 'B': { index: 4, row: 2 }
   };
 
   private activeKeys: Set<string> = new Set();
 
+  private getOctaveFromRow(row: number): number {
+    const octaves = this.renderer.currentOctaves;
+    if (!octaves) return 4;
+    if (row === 0) return octaves.top;
+    if (row === 1) return octaves.mid;
+    return octaves.bottom;
+  }
+
   private handleKeyDown(e: KeyboardEvent) {
     if (e.repeat) return;
-    const noteIndex = this.keyMap[e.key];
-    if (noteIndex !== undefined) {
+    const mapping = this.keyMap[e.key];
+    if (mapping !== undefined) {
       this.activeKeys.add(e.key);
-      this.onNoteStart?.(noteIndex, 4);
+      const octave = this.getOctaveFromRow(mapping.row);
+      this.onNoteStart?.(mapping.index, octave);
     }
   }
 
   private handleKeyUp(e: KeyboardEvent) {
-    const noteIndex = this.keyMap[e.key];
-    if (noteIndex !== undefined) {
+    const mapping = this.keyMap[e.key];
+    if (mapping !== undefined) {
       this.activeKeys.delete(e.key);
-      this.onNoteStop?.(noteIndex, 4);
+      const octave = this.getOctaveFromRow(mapping.row);
+      this.onNoteStop?.(mapping.index, octave);
     }
   }
 

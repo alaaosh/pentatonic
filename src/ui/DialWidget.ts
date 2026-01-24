@@ -34,10 +34,15 @@ export class DialWidget {
 
     // Create DOM
     this.container.innerHTML = `
-      <div class="dial">
+      <div class="dial" tabindex="0" role="slider" 
+           aria-label="${options.label}" 
+           aria-valuemin="${this.min}" 
+           aria-valuemax="${this.max}" 
+           aria-valuenow="${this.value}"
+           aria-valuetext="${this.formatValue(this.value)}">
         <div class="dial-indicator"></div>
       </div>
-      <div class="dial-value">${this.formatValue(this.value)}</div>
+      <div class="dial-value" aria-hidden="true">${this.formatValue(this.value)}</div>
     `;
 
     this.dialEl = this.container.querySelector('.dial') as HTMLElement;
@@ -56,6 +61,39 @@ export class DialWidget {
     this.dialEl.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
     window.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
     window.addEventListener('touchend', this.onMouseUp.bind(this));
+
+    this.dialEl.addEventListener('keydown', this.onKeyDown.bind(this));
+  }
+
+  private onKeyDown(e: KeyboardEvent) {
+    let newVal = this.value;
+    const stepLarge = (this.max - this.min) / 10;
+
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+      newVal += this.step;
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+      newVal -= this.step;
+    } else if (e.key === 'PageUp') {
+      newVal += stepLarge;
+    } else if (e.key === 'PageDown') {
+      newVal -= stepLarge;
+    } else if (e.key === 'Home') {
+      newVal = this.min;
+    } else if (e.key === 'End') {
+      newVal = this.max;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    newVal = Math.round(newVal / this.step) * this.step;
+    newVal = Math.max(this.min, Math.min(this.max, newVal));
+
+    if (this.value !== newVal) {
+      this.value = newVal;
+      this.updateVisuals();
+      this.onChange(this.value);
+    }
   }
 
   private onMouseDown(e: MouseEvent) {
@@ -114,7 +152,12 @@ export class DialWidget {
     const percent = (this.value - this.min) / (this.max - this.min);
     const rotation = -135 + (percent * 270);
     this.indicatorEl.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-    this.valueEl.textContent = this.formatValue(this.value);
+    const formatted = this.formatValue(this.value);
+    this.valueEl.textContent = formatted;
+    
+    // Update ARIA
+    this.dialEl.setAttribute('aria-valuenow', this.value.toString());
+    this.dialEl.setAttribute('aria-valuetext', formatted);
   }
 
   private formatValue(val: number): string {

@@ -25,7 +25,13 @@ export class MultiRangeSlider {
     this.container.querySelectorAll('.slider-handle').forEach(h => {
       const key = h.getAttribute('data-key');
       if (key) {
-        this.handles.set(key, h as HTMLElement);
+        const handle = h as HTMLElement;
+        this.handles.set(key, handle);
+        handle.setAttribute('tabindex', '0');
+        handle.setAttribute('role', 'slider');
+        handle.setAttribute('aria-label', `${key} octave`);
+        handle.setAttribute('aria-valuemin', this.min.toString());
+        handle.setAttribute('aria-valuemax', this.max.toString());
       }
     });
 
@@ -42,6 +48,37 @@ export class MultiRangeSlider {
     this.container.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
     window.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
     window.addEventListener('touchend', this.onMouseUp.bind(this));
+
+    this.container.addEventListener('keydown', this.onKeyDown.bind(this));
+  }
+
+  private onKeyDown(e: KeyboardEvent) {
+    const handle = (e.target as HTMLElement).closest('.slider-handle') as HTMLElement;
+    if (!handle) return;
+    
+    const key = handle.getAttribute('data-key') as keyof SliderValues;
+    let newVal = this.values[key];
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      newVal++;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      newVal--;
+    } else if (e.key === 'Home') {
+      newVal = this.min;
+    } else if (e.key === 'End') {
+      newVal = this.max;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    newVal = Math.max(this.min, Math.min(this.max, newVal));
+    
+    if (this.values[key] !== newVal) {
+      this.values[key] = newVal;
+      this.updateHandlePositions();
+      this.onChange(this.values);
+    }
   }
 
   private updateHandlePositions() {
@@ -49,6 +86,7 @@ export class MultiRangeSlider {
       const val = (this.values as any)[key];
       const percent = ((val - this.min) / (this.max - this.min)) * 100;
       handle.style.left = `${percent}%`;
+      handle.setAttribute('aria-valuenow', val.toString());
     });
   }
 
