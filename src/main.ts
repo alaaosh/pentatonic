@@ -22,6 +22,8 @@ const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectEleme
 const volumeSlider = document.getElementById('volume') as HTMLInputElement;
 const octaveSepSlider = document.getElementById('octave-sep') as HTMLInputElement;
 const noteDisplay = document.getElementById('note-display');
+const unlockOverlay = document.getElementById('audio-unlock');
+const startBtn = document.getElementById('start-btn');
 
 if (!canvas) {
     throw new Error('Canvas element not found');
@@ -31,6 +33,21 @@ if (!canvas) {
 const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
 const touch = new TouchHandler(canvas, renderer);
+
+// --- Audio Unlock Logic ---
+
+const startApp = async () => {
+    await audio.resume();
+    unlockOverlay?.classList.add('hidden');
+    console.log('Pentatonic Synth Started');
+    
+    // Initial Layout after unlock to ensure canvas is ready
+    updateLayout();
+};
+
+if (startBtn) {
+    startBtn.addEventListener('click', startApp);
+}
 
 // --- Subscriptions ---
 
@@ -96,18 +113,13 @@ const updateLayout = () => {
 
 // UI Controls Listeners
 
-// Root Strip Widget
 if (rootStrip) {
     rootStrip.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest('.root-btn');
         if (!btn) return;
-        
         currentRoot = btn.getAttribute('data-value') as RootNote;
-        
-        // Update UI
         rootStrip.querySelectorAll('.root-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
         updateLayout();
     });
 }
@@ -119,15 +131,11 @@ if (scaleSelect) {
     });
 }
 
-// Harmony Mode Segmented Control
 if (harmonyMode) {
     harmonyMode.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest('.segment-btn');
         if (!btn) return;
-        
         currentHarmony = btn.getAttribute('data-value') as HarmonyType;
-        
-        // Update UI
         harmonyMode.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     });
@@ -153,14 +161,12 @@ if (octaveSepSlider) {
     });
 }
 
-// Initial Setup
+// Initial Setup (Partial - Visuals only, full layout after Start)
 updateLayout();
 
-// Prevent default gestures on the document to stop scrolling/zooming while playing
+// Prevent default gestures
 document.addEventListener('touchmove', (e) => {
     if (e.target === canvas) {
         e.preventDefault();
     }
 }, { passive: false });
-
-console.log('Pentatonic Synth Initialized');
