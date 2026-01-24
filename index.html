@@ -7,72 +7,85 @@
     <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Pentatonic Harmony Touch Instrument</h1>
-        <div class="controls">
-            <label for="root-select">Root:</label>
-            <select id="root-select">
-                <option value="C">C</option>
-                <option value="C#">C#</option>
-                <option value="D">D</option>
-                <option value="D#">D#</option>
-                <option value="E">E</option>
-                <option value="F">F</option>
-                <option value="F#">F#</option>
-                <option value="G">G</option>
-                <option value="G#">G#</option>
-                <option value="A">A</option>
-                <option value="A#">A#</option>
-                <option value="B">B</option>
-            </select>
-
-            <label for="scale-select">Scale:</label>
-            <select id="scale-select">
-                <option value="major">Major Pentatonic</option>
-                <option value="minor">Minor Pentatonic</option>
-                <option value="blues">Blues</option>
-                <option value="yo">Yo (Japanese)</option>
-                <option value="hirajoshi">Hirajoshi</option>
-            </select>
-            
-            <label for="harmony-type">Harmony:</label>
-            <select id="harmony-type">
-                <option value="none">Single Note</option>
-                <option value="chord" selected>Full Chords</option>
-                <option value="power">Power Chords</option>
-                <option value="arpeggio">Arpeggios</option>
-            </select>
-
-            <label for="chord-type">Chord Type:</label>
-            <select id="chord-type">
-                <option value="maj7">Major 7th</option>
-                <option value="min7">Minor 7th</option>
-                <option value="dom7">Dominant 7th</option>
-                <option value="maj9">Major 9th</option>
-                <option value="min9">Minor 9th</option>
-                <option value="sus4">Suspended 4th</option>
-                <option value="dim7">Diminished 7th</option>
-            </select>
-            
-            <label for="volume">Volume:</label>
-            <input type="range" id="volume" min="0" max="100" value="50">
-
-            <label for="octave-sep">Octave Separation:</label>
-            <input type="range" id="octave-sep" min="1" max="3" value="1" step="1">
-        </div>
-        
-        <canvas id="instrument" 
-            tabindex="0" 
-            role="application" 
-            aria-label="Pentatonic Musical Instrument" 
-            aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
-        
-        <div class="info">
-            <p>Touch the colored areas or use keys <strong>A, S, D, F, G</strong> to play</p>
-            <div id="note-display" aria-live="polite">Touch to play</div>
-        </div>
-    </div>
+        <div class="app-layout">
+            <header class="top-bar">
+                <div class="control-group horizontal">
+                    <label>Volume</label>
+                    <input type="range" id="volume" min="0" max="100" value="50">
+                </div>
+                <h1>Pentatonic Synth</h1>
+                <div class="control-group horizontal">
+                    <label>Octave Span</label>
+                    <input type="range" id="octave-sep" min="1" max="3" value="1" step="1">
+                </div>
+            </header>
     
+            <aside class="sidebar sidebar-left">
+                <div class="control-group">
+                    <label>Root Note</label>
+                    <div id="root-strip" class="root-grid">
+                        <button class="root-btn active" data-value="C">C</button>
+                        <button class="root-btn" data-value="C#">C#</button>
+                        <button class="root-btn" data-value="D">D</button>
+                        <button class="root-btn" data-value="D#">D#</button>
+                        <button class="root-btn" data-value="E">E</button>
+                        <button class="root-btn" data-value="F">F</button>
+                        <button class="root-btn" data-value="F#">F#</button>
+                        <button class="root-btn" data-value="G">G</button>
+                        <button class="root-btn" data-value="G#">G#</button>
+                        <button class="root-btn" data-value="A">A</button>
+                        <button class="root-btn" data-value="A#">A#</button>
+                        <button class="root-btn" data-value="B">B</button>
+                    </div>
+                </div>
+    
+                <div class="control-group">
+                    <label>Scale Type</label>
+                    <select id="scale-select" class="modern-select">
+                        <option value="major">Major Pentatonic</option>
+                        <option value="minor">Minor Pentatonic</option>
+                        <option value="blues">Blues</option>
+                        <option value="yo">Yo (Japanese)</option>
+                        <option value="hirajoshi">Hirajoshi</option>
+                    </select>
+                </div>
+            </aside>
+    
+            <main class="main-content">
+                <canvas id="instrument" 
+                    tabindex="0" 
+                    role="application" 
+                    aria-label="Pentatonic Musical Instrument" 
+                    aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
+                
+                <div id="note-display" aria-live="polite">Touch to play</div>
+            </main>
+    
+            <aside class="sidebar sidebar-right">
+                <div class="control-group">
+                    <label>Harmony Mode</label>
+                    <div id="harmony-mode" class="segmented-control vertical">
+                        <button class="segment-btn" data-value="none">Single</button>
+                        <button class="segment-btn active" data-value="chord">Chord</button>
+                        <button class="segment-btn" data-value="power">Power</button>
+                        <button class="segment-btn" data-value="arpeggio">Arp</button>
+                    </div>
+                </div>
+    
+                <div class="control-group">
+                    <label>Chord Type</label>
+                    <select id="chord-type" class="modern-select">
+                        <option value="maj7">Major 7th</option>
+                        <option value="min7">Minor 7th</option>
+                        <option value="dom7">Dominant 7th</option>
+                        <option value="maj9">Major 9th</option>
+                        <option value="min9">Minor 9th</option>
+                        <option value="sus4">Suspended 4th</option>
+                        <option value="dim7">Diminished 7th</option>
+                    </select>
+                </div>
+            </aside>
+        </div>    
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
