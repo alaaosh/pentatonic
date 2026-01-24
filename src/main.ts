@@ -15,9 +15,9 @@ let currentChordType: ChordType = 'maj7';
 
 // DOM Elements
 const canvas = document.getElementById('instrument') as HTMLCanvasElement;
-const rootSelect = document.getElementById('root-select') as HTMLSelectElement;
+const rootStrip = document.getElementById('root-strip');
 const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement;
-const harmonySelect = document.getElementById('harmony-type') as HTMLSelectElement;
+const harmonyMode = document.getElementById('harmony-mode');
 const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
 const volumeSlider = document.getElementById('volume') as HTMLInputElement;
 const octaveSepSlider = document.getElementById('octave-sep') as HTMLInputElement;
@@ -42,7 +42,6 @@ globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
         const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType, data.chordType);
         const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (data.octave - 4)));
         
-        // We need a unique ID for synthesis that includes octave to allow polyphonic octaves
         const voiceId = `${data.index}-${data.octave}`;
         audio.triggerNote(voiceId, frequencies, data.harmonyType);
         
@@ -96,9 +95,19 @@ const updateLayout = () => {
 };
 
 // UI Controls Listeners
-if (rootSelect) {
-    rootSelect.addEventListener('change', (e) => {
-        currentRoot = (e.target as HTMLSelectElement).value as RootNote;
+
+// Root Strip Widget
+if (rootStrip) {
+    rootStrip.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.root-btn');
+        if (!btn) return;
+        
+        currentRoot = btn.getAttribute('data-value') as RootNote;
+        
+        // Update UI
+        rootStrip.querySelectorAll('.root-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
         updateLayout();
     });
 }
@@ -110,19 +119,24 @@ if (scaleSelect) {
     });
 }
 
-if (harmonySelect) {
-    harmonySelect.addEventListener('change', (e) => {
-        currentHarmony = (e.target as HTMLSelectElement).value as HarmonyType;
+// Harmony Mode Segmented Control
+if (harmonyMode) {
+    harmonyMode.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.segment-btn');
+        if (!btn) return;
+        
+        currentHarmony = btn.getAttribute('data-value') as HarmonyType;
+        
+        // Update UI
+        harmonyMode.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
     });
-    // Set initial value from DOM
-    currentHarmony = harmonySelect.value as HarmonyType;
 }
 
 if (chordTypeSelect) {
     chordTypeSelect.addEventListener('change', (e) => {
         currentChordType = (e.target as HTMLSelectElement).value as ChordType;
     });
-    currentChordType = chordTypeSelect.value as ChordType;
 }
 
 if (volumeSlider) {
