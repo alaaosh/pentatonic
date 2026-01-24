@@ -53,9 +53,19 @@ body {
 .top-bar-controls {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: stretch;
     gap: 12px;
     width: 100%;
+}
+
+.vol-group {
+    justify-content: space-between;
+}
+
+.tone-shaping-group {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
 }
 
 .sidebar-left { grid-area: side-left; }
@@ -161,7 +171,8 @@ body {
 .vertical-slider-container {
     position: relative;
     width: 24px;
-    height: 50px; /* Scaled to fit top-bar */
+    height: 100%;
+    min-height: 50px;
     cursor: ns-resize;
     display: flex;
     justify-content: center;
@@ -347,6 +358,17 @@ body {
     cursor: pointer;
 }
 
+@media (max-width: 1000px) {
+    .tone-shaping-group {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    .inner-divider {
+        display: none;
+    }
+}
+
 /* Portrait Responsiveness */
 @media (max-width: 800px) or (orientation: portrait) {
     body { overflow: hidden; height: 100vh; }
@@ -366,7 +388,7 @@ body {
     .sidebar { padding: 5px 10px; gap: 5px; background: rgba(255, 255, 255, 0.03); align-self: stretch; }
     .top-bar { padding: 5px 10px; gap: 5px; }
     .top-bar h1 { font-size: 1.0em; }
-    .top-bar-controls { gap: 8px; flex-wrap: nowrap; overflow-x: auto; width: 100%; justify-content: flex-start; }
+    .top-bar-controls { gap: 8px; width: 100%; justify-content: center; }
     #note-display { display: none; }
     .main-content { gap: 2px; }
     .control-group { gap: 4px; }
@@ -379,6 +401,6 @@ body {
     .root-btn { padding: 4px 0; font-size: 0.7em; }
     .segmented-control.vertical { flex-direction: row; }
     .segment-btn { padding: 6px 2px; font-size: 0.7em; }
-    .synth-dials-row { gap: 5px; padding: 0; background: none; }
-    .vertical-slider-container { height: 40px; }
+    .synth-dials-row { gap: 5px; padding: 0; background: none; flex-wrap: wrap; justify-content: center; }
+    .vertical-slider-container { min-height: 40px; }
 }
