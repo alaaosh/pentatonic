@@ -2,14 +2,14 @@ import { ScaleManager, RootNote, ScaleType, HarmonyType, ChordType } from './aud
 import { SynthesisEngine } from './audio/SynthesisEngine';
 import { VisualRenderer } from './ui/VisualRenderer';
 import { TouchHandler } from './ui/TouchHandler';
+import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { globalEvents, EventType, NoteOnEvent, NoteOffEvent } from './utils/EventProcessor';
 import './styles.css';
 
 // App State
 let currentRoot: RootNote = 'C';
 let currentScaleType: ScaleType = 'major';
-let currentOctave = 4;
-let currentOctaveOffset = 1;
+let currentOctaves = { top: 5, mid: 4, bottom: 3 };
 let currentHarmony: HarmonyType = 'chord';
 let currentChordType: ChordType = 'maj7';
 
@@ -20,7 +20,6 @@ const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement
 const harmonyMode = document.getElementById('harmony-mode');
 const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
 const volumeSlider = document.getElementById('volume') as HTMLInputElement;
-const octaveSepSlider = document.getElementById('octave-sep') as HTMLInputElement;
 const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
@@ -34,14 +33,18 @@ const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
 const touch = new TouchHandler(canvas, renderer);
 
+// Multi-handle Octave Slider
+new MultiRangeSlider('octave-slider', currentOctaves, (newValues) => {
+    currentOctaves = { ...newValues };
+    updateLayout();
+});
+
 // --- Audio Unlock Logic ---
 
 const startApp = async () => {
     await audio.resume();
     unlockOverlay?.classList.add('hidden');
     console.log('Pentatonic Synth Started');
-    
-    // Initial Layout after unlock to ensure canvas is ready
     updateLayout();
 };
 
@@ -107,8 +110,8 @@ touch.onNoteStop = (noteIndex, octave) => {
 
 // Helper to update the scale layout
 const updateLayout = () => {
-    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
-    renderer.updateLayout(notes, currentOctave, currentOctaveOffset);
+    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, 4);
+    renderer.updateLayout(notes, currentOctaves);
 };
 
 // UI Controls Listeners
@@ -154,19 +157,13 @@ if (volumeSlider) {
     });
 }
 
-if (octaveSepSlider) {
-    octaveSepSlider.addEventListener('input', (e) => {
-        currentOctaveOffset = parseInt((e.target as HTMLInputElement).value);
-        updateLayout();
-    });
-}
-
-// Initial Setup (Partial - Visuals only, full layout after Start)
+// Initial Setup
 updateLayout();
 
-// Prevent default gestures
 document.addEventListener('touchmove', (e) => {
     if (e.target === canvas) {
         e.preventDefault();
     }
 }, { passive: false });
+
+console.log('Pentatonic Synth Initialized');
