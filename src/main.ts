@@ -9,6 +9,7 @@ import './styles.css';
 let currentRoot: RootNote = 'C';
 let currentScaleType: ScaleType = 'major';
 let currentOctave = 4;
+let currentOctaveOffset = 1;
 let currentHarmony: HarmonyType = 'chord';
 let currentChordType: ChordType = 'maj7';
 
@@ -19,6 +20,7 @@ const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement
 const harmonySelect = document.getElementById('harmony-type') as HTMLSelectElement;
 const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
 const volumeSlider = document.getElementById('volume') as HTMLInputElement;
+const octaveSepSlider = document.getElementById('octave-sep') as HTMLInputElement;
 const noteDisplay = document.getElementById('note-display');
 
 if (!canvas) {
@@ -90,7 +92,7 @@ touch.onNoteStop = (noteIndex, octave) => {
 // Helper to update the scale layout
 const updateLayout = () => {
     const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, currentOctave);
-    renderer.updateLayout(notes, currentOctave);
+    renderer.updateLayout(notes, currentOctave, currentOctaveOffset);
 };
 
 // UI Controls Listeners
@@ -127,6 +129,13 @@ if (volumeSlider) {
     volumeSlider.addEventListener('input', (e) => {
         const val = parseFloat((e.target as HTMLInputElement).value) / 100;
         audio.setVolume(val);
+    });
+}
+
+if (octaveSepSlider) {
+    octaveSepSlider.addEventListener('input', (e) => {
+        currentOctaveOffset = parseInt((e.target as HTMLInputElement).value);
+        updateLayout();
     });
 }
 

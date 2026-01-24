@@ -53,17 +53,17 @@ export class VisualRenderer {
     this.render();
   }
 
-  updateLayout(notes: PentatonicNote[], baseOctave: number) {
+  updateLayout(notes: PentatonicNote[], baseOctave: number, octaveOffset: number = 1) {
     const rect = this.canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
     const noteWidth = width / notes.length;
 
-    // Split heights: Top 25% (+1), Center 50% (base), Bottom 25% (-1)
+    // Split heights: Top 25% (+offset), Center 50% (base), Bottom 25% (-offset)
     const heights = [
-        { pct: 0.25, offset: 1 },
+        { pct: 0.25, offset: octaveOffset },
         { pct: 0.5, offset: 0 },
-        { pct: 0.25, offset: -1 }
+        { pct: 0.25, offset: -octaveOffset }
     ];
 
     this.noteAreas = [];
@@ -116,8 +116,9 @@ export class VisualRenderer {
       const isActive = this.activeNotes.has(key);
 
       // Distinguish octaves visually: brightness
+      // Use the center octave of the first column as base
       const baseOctave = this.noteAreas[1]?.octave || 4;
-      const brightnessShift = (area.octave - baseOctave) * 15;
+      const brightnessShift = (area.octave === baseOctave) ? 0 : (area.octave > baseOctave ? 20 : -20);
       
       this.ctx.fillStyle = this.adjustBrightness(area.color, brightnessShift);
       this.ctx.fillRect(area.x, area.y, area.width, area.height);
