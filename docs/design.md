@@ -68,18 +68,31 @@ graph TB
 }
 ```
 
-## 5. Future Roadmap (Tone Shaping Suggestions)
+### PresetSchema
+```typescript
+{
+  name: string;
+  waveform: Waveform;
+  envelope: EnvelopeParams;
+  filter: FilterParams;
+  effects: { delay: number, reverb: number };
+}
+```
 
-### 5.1. LFO Engine (Movement)
-- Implement a Low-Frequency Oscillator to modulate Pitch (Vibrato) or Filter (Tremolo/Auto-wah).
-- Add "Depth" and "Rate" dials to the dashboard.
+## 5. Future Roadmap
 
-### 5.2. Filter Resonance Control
-- Add a dedicated Dial for Filter Q (Resonance) to allow for sharper, "squelchy" electronic sounds.
+### 5.1. Audio Effects Chain (NEW)
+- **Stereo Delay**: Implementation of a feedback loop with `DelayNode` and `PanNode`.
+- **Global Reverb**: Convolution-based or algorithmic shimmer using a shared `ConvolverNode`.
 
-### 5.3. Modulation Visuals
-- Update the VisualRenderer to show a "glow" or "ripple" effect that moves with the finger during pitch and timbre modulation.
+### 5.2. LFO Engine (Movement)
+- Implement a Low-Frequency Oscillator to modulate Pitch (Vibrato) or Filter (Tremolo).
+- Add "Depth" and "Rate" dials.
 
-## 6. Testing & Compliance
-- **Autoplay Compliance**: "Start Instrument" overlay ensures valid user gesture.
-- **Responsive Workspace**: Landscape grid vs. Portrait stack (minimized gaps).
+### 5.3. Preset System
+- **Persistence**: Integration with `localStorage` for saving user-defined patches.
+- **Factory Bank**: Initial set of "Classic Lead", "Deep Bass", and "Ethereal Pad".
+
+### 5.4. Visual "Juice"
+- Update the VisualRenderer to show "glow" or "ripple" effects reactive to `NoteModulateEvent`.
+- Implement a background spectrum analyzer (Fast Fourier Transform).
