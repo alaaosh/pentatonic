@@ -127,7 +127,25 @@ globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
 globalEvents.subscribe<NoteModulateEvent>(EventType.NOTE_MODULATE, (data) => {
     const voiceId = `${data.index}-${data.octave}`;
     audio.modulateNote(voiceId, data.pitchBend, data.timbre);
-});
+    
+    // Get the note area for visual feedback
+    const area = renderer.getAreaAt(
+      data.index * (canvas.width / 5), 
+      data.octave === currentOctaves.top ? canvas.height * 0.125 :
+      data.octave === currentOctaves.mid ? canvas.height * 0.625 :
+      canvas.height * 0.875
+    );
+    
+    if (area) {
+      // Pass modulation data to renderer for visual feedback
+      renderer.handleModulation(
+        area.x + area.width / 2, 
+        area.y + area.height / 2, 
+        data.pitchBend, 
+        data.timbre
+      );
+    }
+  });
 
 // --- Input Handling -> Event Emission ---
 

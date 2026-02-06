@@ -17,11 +17,24 @@ export interface OctaveSettings {
   bottom: number;
 }
 
+export interface RippleEffect {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  opacity: number;
+  color: string;
+  createdAt: number;
+  type: 'pitch' | 'timbre';
+}
+
 export class VisualRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private noteAreas: NoteArea[] = [];
   private activeNotes: Set<string> = new Set();
+  private rippleEffects: RippleEffect[] = [];
   
   // Store state for resize recalculations
   private currentNotes: PentatonicNote[] = [];
@@ -43,6 +56,9 @@ export class VisualRenderer {
     // MutationObserver to catch layout changes that don't trigger window.resize
     const observer = new MutationObserver(() => this.resize());
     observer.observe(document.body, { attributes: true, childList: true, subtree: true });
+    
+    // Start animation loop for ripple effects
+    this.animate();
   }
 
   private setupHighDPI() {
@@ -172,6 +188,17 @@ export class VisualRenderer {
       this.ctx.fillStyle = 'white';
       this.ctx.fillText(`${area.note.name}${area.octave}`, centerX, centerY);
     });
+    
+    // Render ripple effects
+    this.rippleEffects.forEach(ripple => {
+      this.ctx.beginPath();
+      this.ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+      this.ctx.strokeStyle = ripple.color;
+      this.ctx.lineWidth = 2;
+      this.ctx.globalAlpha = ripple.opacity;
+      this.ctx.stroke();
+      this.ctx.globalAlpha = 1.0;
+    });
   }
 
   private adjustBrightness(hex: string, percent: number) {
@@ -181,6 +208,61 @@ export class VisualRenderer {
       G = (num >> 8 & 0x00FF) + amt,
       B = (num & 0x0000FF) + amt;
     return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+
+  /**
+   * Add a ripple effect at a specific position
+   */
+  addRippleEffect(x: number, y: number, type: 'pitch' | 'timbre', intensity: number, color: string) {
+    const rect = this.canvas.getBoundingClientRect();
+    const area = this.getAreaAt(x, y);
+    
+    if (area) {
+      // Create a ripple effect for the note area
+      const ripple: RippleEffect = {
+        id: `${Date.now()}-${Math.random()}`,
+        x: area.x + area.width / 2,
+        y: area.y + area.height / 2,
+        radius: 5,
+        maxRadius: 30 + intensity * 50, // Scale with intensity
+        opacity: 0.7,
+        color: color,
+        createdAt: Date.now(),
+        type: type
+      };
+      
+      this.rippleEffects.push(ripple);
+    }
+  }
+
+  /**
+   * Animation loop for ripple effects
+   */
+  private animate() {
+    this.updateRipples();
+    this.render();
+    requestAnimationFrame(() => this.animate());
+  }
+
+  /**
+   * Update and render ripple effects
+   */
+  private updateRipples() {
+    const now = Date.now();
+    
+    // Update ripple effects
+    this.rippleEffects = this.rippleEffects.filter(ripple => {
+      const age = now - ripple.createdAt;
+      const progress = Math.min(age / 1000, 1); // 1 second duration
+      
+      if (progress >= 1) return false; // Remove expired ripples
+      
+      // Update ripple properties
+      ripple.radius = 5 + (ripple.maxRadius - 5) * progress;
+      ripple.opacity = 0.7 * (1 - progress);
+      
+      return true;
+    });
   }
 
   getNoteAt(x: number, y: number): { index: number, octave: number } | null {
@@ -193,5 +275,27 @@ export class VisualRenderer {
       x >= a.x && x < a.x + a.width &&
       y >= a.y && y < a.y + a.height
     ) || null;
+  }
+
+  /**
+   * Handle modulation events to create visual feedback
+   */
+  handleModulation(x: number, y: number, pitchBend: number, timbre: number) {
+    const area = this.getAreaAt(x, y);
+    if (!area) return;
+    
+    // Map pitch bend to visual effect (range -1 to 1)
+    const pitchIntensity = Math.abs(pitchBend);
+    const timbreIntensity = timbre;
+    
+    // Add pitch bend ripple (blue-ish color)
+    if (Math.abs(pitchBend) > 0.05) { // Only show if significant
+      this.addRippleEffect(x, y, 'pitch', pitchIntensity, '#45B7D1');
+    }
+    
+    // Add timbre ripple (green-ish color)
+    if (timbre > 0.1) { // Only show if significant
+      this.addRippleEffect(x, y, 'timbre', timbreIntensity, '#96CEB4');
+    }
   }
 }
