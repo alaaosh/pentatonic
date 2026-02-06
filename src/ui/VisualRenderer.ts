@@ -298,4 +298,32 @@ export class VisualRenderer {
       this.addRippleEffect(x, y, 'timbre', timbreIntensity, '#96CEB4');
     }
   }
+  
+  /**
+   * Draw FFT spectrum visualization in the background
+   */
+  drawSpectrum(dataArray: Uint8Array, bufferLength: number) {
+    const rect = this.canvas.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    
+    // Draw spectrum at the bottom of the canvas with low opacity
+    this.ctx.globalAlpha = 0.3;
+    this.ctx.fillStyle = 'rgba(70, 130, 180, 0.3)';
+    
+    const barWidth = (width / bufferLength) * 2.5;
+    let barHeight;
+    let x = 0;
+    
+    for (let i = 0; i < bufferLength; i++) {
+      barHeight = dataArray[i] * height / 255;
+      
+      this.ctx.fillStyle = `rgba(${Math.min(255, dataArray[i])}, ${Math.min(255, dataArray[i] * 0.8)}, ${Math.min(255, 255 - dataArray[i])}, 0.3)`;
+      this.ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+      
+      x += barWidth + 1;
+    }
+    
+    this.ctx.globalAlpha = 1.0;
+  }
 }

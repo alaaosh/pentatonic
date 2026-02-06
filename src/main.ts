@@ -49,6 +49,38 @@ let gestureController: GestureController | null = null;
 // Track which voices are active for which fingers to enable polyphony
 const activeFingerVoices: Map<string, { index: number, octave: number }> = new Map();
 
+// Set up periodic spectrum updates
+let spectrumInterval: number | null = null;
+
+const updateSpectrum = () => {
+  const analyserData = audio.getAnalyserData();
+  if (analyserData) {
+    renderer.drawSpectrum(analyserData.dataArray, analyserData.bufferLength);
+  }
+};
+
+// Start spectrum updates when audio is ready
+const startSpectrumUpdates = () => {
+  if (spectrumInterval) clearInterval(spectrumInterval);
+  spectrumInterval = window.setInterval(updateSpectrum, 100); // Update every 100ms
+};
+
+// Listen for audio start to begin spectrum visualization
+document.getElementById('start-btn')?.addEventListener('click', () => {
+  // Delay slightly to ensure audio context is ready
+  setTimeout(() => {
+    startSpectrumUpdates();
+  }, 100);
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (spectrumInterval) {
+    clearInterval(spectrumInterval);
+  }
+});
+
+
 // --- Widget Initializations ---
 
 new VerticalSlider('volume-slider', 0.5, (v) => {
