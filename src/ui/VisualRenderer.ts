@@ -214,7 +214,6 @@ export class VisualRenderer {
    * Add a ripple effect at a specific position
    */
   addRippleEffect(x: number, y: number, type: 'pitch' | 'timbre', intensity: number, color: string) {
-    const rect = this.canvas.getBoundingClientRect();
     const area = this.getAreaAt(x, y);
     
     if (area) {
@@ -303,13 +302,11 @@ export class VisualRenderer {
    * Draw FFT spectrum visualization in the background
    */
   drawSpectrum(dataArray: Uint8Array, bufferLength: number) {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
     
     // Draw spectrum at the bottom of the canvas with low opacity
     this.ctx.globalAlpha = 0.3;
-    this.ctx.fillStyle = 'rgba(70, 130, 180, 0.3)';
     
     const barWidth = (width / bufferLength) * 2.5;
     let barHeight;
