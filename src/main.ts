@@ -1,6 +1,7 @@
 import { ScaleManager, RootNote, ScaleType, HarmonyType, ChordType } from './audio/ScaleManager';
 import { SynthesisEngine, Waveform } from './audio/SynthesisEngine';
 import { VisualRenderer } from './ui/VisualRenderer';
+import { SpectrumRenderer } from './ui/SpectrumRenderer';
 import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { DialWidget } from './ui/DialWidget';
@@ -18,6 +19,7 @@ let currentChordType: ChordType = 'maj7';
 
 // DOM Elements
 const canvas = document.getElementById('instrument') as HTMLCanvasElement;
+const backgroundCanvas = document.getElementById('background-visualizer') as HTMLCanvasElement;
 const rootStrip = document.getElementById('root-strip');
 const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement;
 const harmonyMode = document.getElementById('harmony-mode');
@@ -40,44 +42,30 @@ if (!canvas) {
 }
 
 // Initialize Components
-const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
-const touch = new TouchHandler(canvas, renderer);
-
+const spectrumRenderer = new SpectrumRenderer(backgroundCanvas);
 // Gesture Controller (initialized on demand)
 let gestureController: GestureController | null = null;
 // Track which voices are active for which fingers to enable polyphony
 const activeFingerVoices: Map<string, { index: number, octave: number }> = new Map();
 
-// Set up periodic spectrum updates
-let spectrumInterval: number | null = null;
 
-const updateSpectrum = () => {
-  const analyserData = audio.getAnalyserData();
-  if (analyserData) {
-    renderer.drawSpectrum(analyserData.dataArray, analyserData.bufferLength);
-  }
-};
-
-// Start spectrum updates when audio is ready
-const startSpectrumUpdates = () => {
-  if (spectrumInterval) clearInterval(spectrumInterval);
-  spectrumInterval = window.setInterval(updateSpectrum, 100); // Update every 100ms
-};
-
-// Listen for audio start to begin spectrum visualization
-document.getElementById('start-btn')?.addEventListener('click', () => {
-  // Delay slightly to ensure audio context is ready
-  setTimeout(() => {
-    startSpectrumUpdates();
-  }, 100);
+// Callback to update spectrum data on every frame
+const renderer = new VisualRenderer(canvas, () => {
+    const analyserData = audio.getAnalyserData();
+    if (analyserData) {
+        spectrumRenderer.updateSpectrumData(analyserData.dataArray, analyserData.bufferLength);
+    }
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  if (spectrumInterval) {
-    clearInterval(spectrumInterval);
-  }
+const touch = new TouchHandler(canvas, renderer);
+
+// Listen for audio start
+document.getElementById('start-btn')?.addEventListener('click', () => {
+    // Delay slightly to ensure audio context is ready
+    setTimeout(() => {
+       // Audio resumed, renderer loop is already running
+    }, 100);
 });
 
 
@@ -160,24 +148,32 @@ globalEvents.subscribe<NoteModulateEvent>(EventType.NOTE_MODULATE, (data) => {
     const voiceId = `${data.index}-${data.octave}`;
     audio.modulateNote(voiceId, data.pitchBend, data.timbre);
     
-    // Get the note area for visual feedback
-    const area = renderer.getAreaAt(
-      data.index * (canvas.width / 5), 
-      data.octave === currentOctaves.top ? canvas.height * 0.125 :
-      data.octave === currentOctaves.mid ? canvas.height * 0.625 :
-      canvas.height * 0.875
-    );
+    // Use provided coordinates or calculate fallback
+    let x, y;
     
-    if (area) {
-      // Pass modulation data to renderer for visual feedback
-      renderer.handleModulation(
-        area.x + area.width / 2, 
-        area.y + area.height / 2, 
-        data.pitchBend, 
-        data.timbre
-      );
+    if (data.x !== undefined && data.y !== undefined) {
+        x = data.x;
+        y = data.y;
+    } else {
+        // Calculate the correct position for visual feedback
+        const rect = canvas.getBoundingClientRect();
+        const noteWidth = rect.width / 5; // 5 notes total
+        x = data.index * noteWidth + noteWidth / 2;
+        
+        // Calculate y position based on octave
+        if (data.octave === currentOctaves.top) {
+            y = rect.height * 0.125; // Top octave (25% from top)
+        } else if (data.octave === currentOctaves.mid) {
+            y = rect.height * 0.5; // Middle octave (50% from top)
+        } else {
+            y = rect.height * 0.875; // Bottom octave (75% from top)
+        }
     }
-  });
+    
+    // Pass modulation data to renderer for visual feedback
+    renderer.handleModulation(data.index, data.octave, x, y, data.pitchBend, data.timbre);
+});
+
 
 // --- Input Handling -> Event Emission ---
 
@@ -189,7 +185,7 @@ touch.onNoteStart = (noteIndex, octave) => {
     });
 };
 
-touch.onNoteModulate = (noteIndex, octave, relX, relY) => {
+touch.onNoteModulate = (noteIndex, octave, relX, relY, x, y) => {
     // relY: 0 (top) to 1 (bottom). Let's map center (0.5) to no bend.
     // 0.5 to 0 -> 0 to +1 semitone
     // 0.5 to 1 -> 0 to -1 semitone
@@ -199,7 +195,7 @@ touch.onNoteModulate = (noteIndex, octave, relX, relY) => {
     const timbre = relX; // Range 0 to 1
 
     globalEvents.emit<NoteModulateEvent>(EventType.NOTE_MODULATE, {
-        index: noteIndex, octave: octave, pitchBend, timbre
+        index: noteIndex, octave: octave, pitchBend, timbre, x, y
     });
 };
 

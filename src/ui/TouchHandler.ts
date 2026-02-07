@@ -1,13 +1,15 @@
 import { VisualRenderer } from './VisualRenderer';
 
 export type TouchCallback = (noteIndex: number, octave: number) => void;
-export type ModulateCallback = (noteIndex: number, octave: number, relX: number, relY: number) => void;
+export type ModulateCallback = (noteIndex: number, octave: number, relX: number, relY: number, x: number, y: number) => void;
 
 interface ActiveTouch {
   index: number;
   octave: number;
   relX: number;
   relY: number;
+  x: number;
+  y: number;
 }
 
 export class TouchHandler {
@@ -89,7 +91,9 @@ export class TouchHandler {
             index: area.index,
             octave: area.octave,
             relX: (x - area.x) / area.width,
-            relY: (y - area.y) / area.height
+            relY: (y - area.y) / area.height,
+            x: x,
+            y: y
         };
     }
     return null;
@@ -103,7 +107,7 @@ export class TouchHandler {
       if (result) {
         this.activeTouches.set(touch.identifier, result);
         this.onNoteStart?.(result.index, result.octave);
-        this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY);
+        this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY, result.x, result.y);
       }
     }
   }
@@ -119,11 +123,11 @@ export class TouchHandler {
         if (oldTouch) this.onNoteStop?.(oldTouch.index, oldTouch.octave);
         this.activeTouches.set(touch.identifier, newTouch);
         this.onNoteStart?.(newTouch.index, newTouch.octave);
-        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY, newTouch.x, newTouch.y);
       } else if (newTouch && oldTouch) {
         // Same note, just modulate
         this.activeTouches.set(touch.identifier, newTouch);
-        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+        this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY, newTouch.x, newTouch.y);
       } else if (!newTouch && oldTouch) {
          this.onNoteStop?.(oldTouch.index, oldTouch.octave);
          this.activeTouches.delete(touch.identifier);
@@ -149,7 +153,7 @@ export class TouchHandler {
     if (result) {
       this.activeTouches.set('mouse', result);
       this.onNoteStart?.(result.index, result.octave);
-      this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY);
+      this.onNoteModulate?.(result.index, result.octave, result.relX, result.relY, result.x, result.y);
     }
   }
 
@@ -164,10 +168,10 @@ export class TouchHandler {
       this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.set('mouse', newTouch);
       this.onNoteStart?.(newTouch.index, newTouch.octave);
-      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY, newTouch.x, newTouch.y);
     } else if (newTouch) {
       this.activeTouches.set('mouse', newTouch);
-      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY);
+      this.onNoteModulate?.(newTouch.index, newTouch.octave, newTouch.relX, newTouch.relY, newTouch.x, newTouch.y);
     } else {
       this.onNoteStop?.(oldTouch.index, oldTouch.octave);
       this.activeTouches.delete('mouse');

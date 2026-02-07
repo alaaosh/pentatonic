@@ -26,7 +26,16 @@ export interface RippleEffect {
   opacity: number;
   color: string;
   createdAt: number;
-  type: 'pitch' | 'timbre';
+  type: 'release';
+}
+
+interface ActiveCursor {
+    index: number;
+    octave: number;
+    x: number;
+    y: number;
+    startTime: number;
+    color: string;
 }
 
 export class VisualRenderer {
@@ -34,21 +43,27 @@ export class VisualRenderer {
   private ctx: CanvasRenderingContext2D;
   private noteAreas: NoteArea[] = [];
   private activeNotes: Set<string> = new Set();
+  
+  private activeCursors: Map<string, ActiveCursor> = new Map();
   private rippleEffects: RippleEffect[] = [];
   
   // Store state for resize recalculations
   private currentNotes: PentatonicNote[] = [];
   public currentOctaves: OctaveSettings | null = null;
+  
+  // Spectrum Data
+  private onRender: (() => void) | null = null;
 
   private readonly COLORS = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'
   ];
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, onRender?: () => void) {
     this.canvas = canvas;
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on canvas itself
     if (!context) throw new Error('Could not get 2D context');
     this.ctx = context;
+    this.onRender = onRender || null;
     
     // Listen for resize events
     window.addEventListener('resize', () => this.resize());
@@ -57,7 +72,7 @@ export class VisualRenderer {
     const observer = new MutationObserver(() => this.resize());
     observer.observe(document.body, { attributes: true, childList: true, subtree: true });
     
-    // Start animation loop for ripple effects
+    // Start animation loop
     this.animate();
   }
 
@@ -83,7 +98,6 @@ export class VisualRenderer {
     if (this.currentNotes.length > 0 && this.currentOctaves) {
         this.calculateNoteAreas();
     }
-    this.render();
   }
 
   updateLayout(notes: PentatonicNote[], octaves: OctaveSettings) {
@@ -91,9 +105,8 @@ export class VisualRenderer {
     this.currentOctaves = octaves;
     this.setupHighDPI();
     this.calculateNoteAreas();
-    this.render();
   }
-
+  
   private calculateNoteAreas() {
     if (!this.currentOctaves) return;
     
@@ -137,15 +150,62 @@ export class VisualRenderer {
     const key = `${noteIndex}-${octave}`;
     if (isActive) {
       this.activeNotes.add(key);
+      
+      // Ensure cursor exists (active from start of note)
+      if (!this.activeCursors.has(key)) {
+          const area = this.noteAreas.find(a => a.index === noteIndex && a.octave === octave);
+          if (area) {
+             const cx = area.x + area.width / 2;
+             const cy = area.y + area.height / 2;
+             this.activeCursors.set(key, {
+                 index: noteIndex,
+                 octave: octave,
+                 x: cx,
+                 y: cy,
+                 startTime: Date.now(),
+                 color: area.color
+             });
+          }
+      }
     } else {
       this.activeNotes.delete(key);
+      // Note released: Trigger "End Ripple"
+      this.triggerReleaseRipple(key);
     }
-    this.render();
   }
 
   clearActive() {
     this.activeNotes.clear();
+    // Clear cursors too? Maybe not, or trigger all releases.
+    this.activeCursors.forEach((_, key) => this.triggerReleaseRipple(key));
+  }
+  
+  private triggerReleaseRipple(key: string) {
+      const cursor = this.activeCursors.get(key);
+      if (cursor) {
+          const duration = Date.now() - cursor.startTime;
+          // Scale maxRadius based on duration (short tap = small ripple, long press = big ripple)
+          // Clamp duration effect between 100ms and 1000ms
+          const normalizedDuration = Math.min(Math.max(duration, 100), 1000) / 1000; 
+          // Size range: 20px to 100px
+          const size = 20 + (normalizedDuration * 80);
+          
+          this.addRippleEffect(cursor.x, cursor.y, size, cursor.color);
+          this.activeCursors.delete(key);
+      }
+  }
+
+  /**
+   * Main Render Loop
+   */
+  private animate() {
+    if (this.onRender) {
+        this.onRender();
+    }
+    
+    this.updateRipples();
     this.render();
+    requestAnimationFrame(() => this.animate());
   }
 
   render() {
@@ -153,10 +213,20 @@ export class VisualRenderer {
     const width = rect.width;
     const height = rect.height;
 
+    // 1. Clear & Background
     this.ctx.clearRect(0, 0, width, height);
+    
+    // Fill background with dark gradient to match theme
+    // We make it semi-transparent so the background spectrum shows through
+    const bgGradient = this.ctx.createLinearGradient(0, 0, 0, height);
+    bgGradient.addColorStop(0, 'rgba(26, 26, 46, 0.8)');
+    bgGradient.addColorStop(1, 'rgba(22, 33, 62, 0.8)');
+    this.ctx.fillStyle = bgGradient;
+    this.ctx.fillRect(0, 0, width, height);
 
     if (this.noteAreas.length === 0) return;
 
+    // 3. Draw Note Areas (Semi-transparent)
     this.noteAreas.forEach((area) => {
       const key = `${area.index}-${area.octave}`;
       const isActive = this.activeNotes.has(key);
@@ -164,18 +234,24 @@ export class VisualRenderer {
       const midOctave = this.currentOctaves?.mid || 4;
       const brightnessShift = (area.octave === midOctave) ? 0 : (area.octave > midOctave ? 20 : -20);
       
-      this.ctx.fillStyle = this.adjustBrightness(area.color, brightnessShift);
+      const baseColor = this.adjustBrightness(area.color, brightnessShift);
+      
+      // Use alpha for transparency
+      this.ctx.globalAlpha = isActive ? 0.9 : 0.6;
+      this.ctx.fillStyle = baseColor;
       this.ctx.fillRect(area.x, area.y, area.width, area.height);
+      this.ctx.globalAlpha = 1.0;
 
       if (isActive) {
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
         this.ctx.fillRect(area.x, area.y, area.width, area.height);
       }
 
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       this.ctx.lineWidth = 1;
       this.ctx.strokeRect(area.x, area.y, area.width, area.height);
 
+      // Text labels
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       const centerX = area.x + area.width / 2;
@@ -183,21 +259,57 @@ export class VisualRenderer {
 
       this.ctx.font = area.height < 60 ? 'bold 12px Arial' : 'bold 20px Arial';
       
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.ctx.fillText(`${area.note.name}${area.octave}`, centerX + 1, centerY + 1);
-      this.ctx.fillStyle = 'white';
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       this.ctx.fillText(`${area.note.name}${area.octave}`, centerX, centerY);
     });
     
-    // Render ripple effects
+    // 4. Draw Active Cursors
+    this.drawActiveCursors();
+    
+    // 5. Draw Release Ripples
+    this.drawRipples();
+  }
+  
+  private drawActiveCursors() {
+      this.activeCursors.forEach(cursor => {
+          this.ctx.save();
+          this.ctx.shadowBlur = 20;
+          this.ctx.shadowColor = 'white';
+          
+          // Outer glow ring
+          this.ctx.beginPath();
+          this.ctx.arc(cursor.x, cursor.y, 25, 0, Math.PI * 2);
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          this.ctx.lineWidth = 2;
+          this.ctx.stroke();
+          
+          // Inner core
+          this.ctx.beginPath();
+          this.ctx.arc(cursor.x, cursor.y, 10, 0, Math.PI * 2);
+          this.ctx.fillStyle = 'white';
+          this.ctx.fill();
+          
+          this.ctx.restore();
+      });
+  }
+  
+  private drawRipples() {
     this.rippleEffects.forEach(ripple => {
+      this.ctx.save();
+      
+      this.ctx.shadowBlur = 15;
+      this.ctx.shadowColor = ripple.color;
+      
       this.ctx.beginPath();
       this.ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
       this.ctx.strokeStyle = ripple.color;
-      this.ctx.lineWidth = 2;
+      this.ctx.lineWidth = 3;
       this.ctx.globalAlpha = ripple.opacity;
       this.ctx.stroke();
-      this.ctx.globalAlpha = 1.0;
+      
+      this.ctx.restore();
     });
   }
 
@@ -210,55 +322,34 @@ export class VisualRenderer {
     return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
   }
 
-  /**
-   * Add a ripple effect at a specific position
-   */
-  addRippleEffect(x: number, y: number, type: 'pitch' | 'timbre', intensity: number, color: string) {
-    const area = this.getAreaAt(x, y);
-    
-    if (area) {
-      // Create a ripple effect for the note area
+  addRippleEffect(x: number, y: number, maxRadius: number, color: string) {
       const ripple: RippleEffect = {
         id: `${Date.now()}-${Math.random()}`,
-        x: area.x + area.width / 2,
-        y: area.y + area.height / 2,
-        radius: 5,
-        maxRadius: 30 + intensity * 50, // Scale with intensity
-        opacity: 0.7,
+        x: x,
+        y: y,
+        radius: 10,
+        maxRadius: maxRadius,
+        opacity: 0.8,
         color: color,
         createdAt: Date.now(),
-        type: type
+        type: 'release'
       };
-      
       this.rippleEffects.push(ripple);
-    }
   }
 
-  /**
-   * Animation loop for ripple effects
-   */
-  private animate() {
-    this.updateRipples();
-    this.render();
-    requestAnimationFrame(() => this.animate());
-  }
-
-  /**
-   * Update and render ripple effects
-   */
   private updateRipples() {
     const now = Date.now();
-    
-    // Update ripple effects
     this.rippleEffects = this.rippleEffects.filter(ripple => {
       const age = now - ripple.createdAt;
-      const progress = Math.min(age / 1000, 1); // 1 second duration
+      const progress = Math.min(age / 500, 1); // 0.5s fade out (quick)
       
-      if (progress >= 1) return false; // Remove expired ripples
+      if (progress >= 1) return false;
       
-      // Update ripple properties
-      ripple.radius = 5 + (ripple.maxRadius - 5) * progress;
-      ripple.opacity = 0.7 * (1 - progress);
+      // Easing out
+      const ease = 1 - Math.pow(1 - progress, 3);
+      
+      ripple.radius = 10 + (ripple.maxRadius - 10) * ease;
+      ripple.opacity = 0.8 * (1 - progress);
       
       return true;
     });
@@ -276,51 +367,24 @@ export class VisualRenderer {
     ) || null;
   }
 
-  /**
-   * Handle modulation events to create visual feedback
-   */
-  handleModulation(x: number, y: number, pitchBend: number, timbre: number) {
-    const area = this.getAreaAt(x, y);
-    if (!area) return;
+  handleModulation(index: number, octave: number, x: number, y: number, _pitchBend: number, _timbre: number) {
+    const key = `${index}-${octave}`;
+    let cursor = this.activeCursors.get(key);
     
-    // Map pitch bend to visual effect (range -1 to 1)
-    const pitchIntensity = Math.abs(pitchBend);
-    const timbreIntensity = timbre;
-    
-    // Add pitch bend ripple (blue-ish color)
-    if (Math.abs(pitchBend) > 0.05) { // Only show if significant
-      this.addRippleEffect(x, y, 'pitch', pitchIntensity, '#45B7D1');
+    if (!cursor) {
+        // Create new cursor
+        // Find color
+        const area = this.noteAreas.find(a => a.index === index && a.octave === octave);
+        const color = area ? area.color : '#ffffff';
+        
+        cursor = {
+            index, octave, x, y, startTime: Date.now(), color
+        };
+        this.activeCursors.set(key, cursor);
+    } else {
+        // Update existing
+        cursor.x = x;
+        cursor.y = y;
     }
-    
-    // Add timbre ripple (green-ish color)
-    if (timbre > 0.1) { // Only show if significant
-      this.addRippleEffect(x, y, 'timbre', timbreIntensity, '#96CEB4');
-    }
-  }
-  
-  /**
-   * Draw FFT spectrum visualization in the background
-   */
-  drawSpectrum(dataArray: Uint8Array, bufferLength: number) {
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    
-    // Draw spectrum at the bottom of the canvas with low opacity
-    this.ctx.globalAlpha = 0.3;
-    
-    const barWidth = (width / bufferLength) * 2.5;
-    let barHeight;
-    let x = 0;
-    
-    for (let i = 0; i < bufferLength; i++) {
-      barHeight = dataArray[i] * height / 255;
-      
-      this.ctx.fillStyle = `rgba(${Math.min(255, dataArray[i])}, ${Math.min(255, dataArray[i] * 0.8)}, ${Math.min(255, 255 - dataArray[i])}, 0.3)`;
-      this.ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-      
-      x += barWidth + 1;
-    }
-    
-    this.ctx.globalAlpha = 1.0;
   }
 }

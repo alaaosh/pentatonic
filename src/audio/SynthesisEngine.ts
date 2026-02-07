@@ -235,6 +235,8 @@ export class SynthesisEngine {
     Array.from(this.voices.keys()).forEach(id => this.stopNote(id));
   }
   
+  private analyserDataArray: Uint8Array | null = null;
+  
   /**
    * Get analyzer data for visualization
    */
@@ -242,12 +244,15 @@ export class SynthesisEngine {
     if (!this.analyser) return null;
     
     const bufferLength = this.analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    this.analyser.getByteFrequencyData(dataArray);
+    if (!this.analyserDataArray || this.analyserDataArray.length !== bufferLength) {
+        this.analyserDataArray = new Uint8Array(bufferLength);
+    }
+    
+    this.analyser.getByteFrequencyData(this.analyserDataArray as any);
     
     return {
       bufferLength,
-      dataArray
+      dataArray: this.analyserDataArray
     };
   }
 }
