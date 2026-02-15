@@ -70,13 +70,20 @@ graph TB
 - **VerticalSlider**: Dedicated high-resolution volume control.
 
 ### 3.5. GestureController (Air Piano)
-- **MediaPipe Integration**: Tracks 2 hands simultaneously (42 landmarks total).
+- **MediaPipe Integration**: Uses `@mediapipe/tasks-vision` for high-performance tracking.
+- **Offline Support**: Loads local `.wasm` binaries and `.task` model files from `public/mediapipe/`, removing CDN dependencies.
+- **Input Modes**:
+  - **Webcam**: Real-time stream processing.
+  - **Video File**: Analysis of uploaded video files for offline scoring.
 - **Finger Bend Detection**: Calculates joint angles to determine "Note On" (Bent < 150°) vs "Note Off" (Straight).
 - **Polyphony**: Supports 10 simultaneous voices (one per finger).
 - **Mapping**:
-  - Left Hand: Bass Octave (Notes 0-4 mapped Pinky→Thumb)
-  - Right Hand: Melody Octave (Notes 0-4 mapped Thumb→Pinky)
+  - Right Hand (Visual Right/User Right): Melody Octave (Notes 0-4 mapped Thumb→Pinky).
+  - Left Hand (Visual Left/User Left): Bass Octave (Notes 0-4 mapped Pinky→Thumb).
 - **Modulation**: Relative Y-axis movement of a bent finger controls Pitch Bend ($\pm 1$ semitone).
+- **Controls**:
+  - Toggle Button: Activates/Deactivates the camera system.
+  - Close Panel: Hides the overlay but keeps the instrument running (background play).
 
 ## 4. Data Models
 
@@ -138,8 +145,12 @@ graph TB
 - Update the VisualRenderer to show "glow" or "ripple" effects reactive to `NoteModulateEvent`.
 - Implement a background spectrum analyzer (Fast Fourier Transform).
 
-### 5.5. Advanced Gesture Control (EXPERIMENTAL)
-Current implementation is a proof-of-concept. Future enhancements:
+### 5.6. Offline & Video Support (NEW)
+- **Local Assets**: Host MediaPipe `.wasm` and model files locally to remove CDN dependency and enable air-gapped usage.
+- **Video Interpretation**:
+  - Ability to upload pre-recorded video files.
+  - Sync frame processing loop to video playback.
+  - "Score" existing videos musically based on visual gestures.
 
 #### Phase 1: Refinement (Short-term)
 - **Gesture Smoothing**: Implement Kalman filtering or exponential moving average to reduce jitter

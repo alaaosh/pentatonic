@@ -33,6 +33,7 @@ const gesturePanel = document.getElementById('gesture-panel');
 const gestureCloseBtn = document.getElementById('gesture-close');
 const gestureVideo = document.getElementById('gesture-video') as HTMLVideoElement;
 const gestureCanvas = document.getElementById('gesture-canvas') as HTMLCanvasElement;
+const videoUpload = document.getElementById('video-upload') as HTMLInputElement;
 
 if (!canvas) {
     throw new Error('Canvas element not found');
@@ -217,8 +218,46 @@ document.addEventListener('touchmove', (e) => {
 // --- Gesture Control Logic ---
 
 if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
+    // Handle File Upload
+    if (videoUpload) {
+        videoUpload.addEventListener('change', (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file && gestureController) {
+                gestureController.loadVideo(file);
+            }
+        });
+    }
+
     gestureToggleBtn.addEventListener('click', async () => {
-        if (!gestureController) {
+        // Mode 1: If Controller is active, Toggle logic
+        if (gestureController) {
+            // If panel is hidden, show it. If panel is visible, STOP controller (Toggle OFF).
+            // Wait, user said: "stopping... should be by clicking icon again".
+            // And: "camera to keep working even if we dismiss the camera overlay".
+            
+            // Logic:
+            // 1. If Controller Exists:
+            //    - Click -> Stop Controller completely.
+            // 2. If Controller doesn't exist:
+            //    - Click -> Start Controller & Show Panel.
+            
+            // STOP Logic
+            activeFingerVoices.forEach((noteData, voiceId) => {
+                audio.stopNote(voiceId);
+                renderer.setActive(noteData.index, noteData.octave, false);
+            });
+            activeFingerVoices.clear();
+            gestureController.stop();
+            gestureController = null;
+            
+            gesturePanel.classList.add('hidden');
+            gestureToggleBtn.classList.remove('active'); // Visual feedback
+            
+        } else {
+            // START Logic
+            gestureToggleBtn.classList.add('active'); // Visual feedback
+            gesturePanel.classList.remove('hidden');
+
             try {
                 gestureCanvas.width = 640;
                 gestureCanvas.height = 480;
@@ -226,10 +265,9 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
                 await gestureController.initialize();
                 
                 gestureController.onGesture((event) => {
-                    const voiceId = event.fingerId; // Use finger ID (e.g., "Left-0") as voice ID for polyphony
+                    const voiceId = event.fingerId; 
 
                     if (event.type === 'start') {
-                        // 1. Generate frequencies
                         const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, event.octave);
                         const rootNote = notes[event.noteIndex];
                         if (rootNote) {
@@ -239,7 +277,6 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
                              audio.triggerNote(voiceId, frequencies, currentHarmony);
                              activeFingerVoices.set(voiceId, { index: event.noteIndex, octave: event.octave });
                              
-                             // Visual feedback (optional: light up the key)
                              renderer.setActive(event.noteIndex, event.octave, true);
                         }
 
@@ -253,7 +290,6 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
 
                     } else if (event.type === 'modulate') {
                         if (event.pitchBend !== undefined) {
-                            // Timbre can be mapped to X-axis deviation or Z-depth in future
                             audio.modulateNote(voiceId, event.pitchBend, 0); 
                         }
                     }
@@ -261,23 +297,15 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
             } catch (error) {
                 console.error('Failed to initialize gesture control:', error);
                 alert('Camera access required for gesture control. Please allow camera permissions.');
+                gestureToggleBtn.classList.remove('active');
                 return;
             }
         }
-        
-        gesturePanel.classList.toggle('hidden');
     });
     
     gestureCloseBtn.addEventListener('click', () => {
+        // Just hide the panel, keep controller running
         gesturePanel.classList.add('hidden');
-        
-        // Stop all active gesture notes
-        activeFingerVoices.forEach((noteData, voiceId) => {
-            audio.stopNote(voiceId);
-            renderer.setActive(noteData.index, noteData.octave, false);
-        });
-        activeFingerVoices.clear();
-        gestureController?.stop();
     });
 }
 

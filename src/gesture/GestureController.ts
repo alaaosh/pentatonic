@@ -1,7 +1,9 @@
 /**
  * GestureController - Camera-based hand gesture control for Pentatonic Synth
- * Uses MediaPipe Hands for real-time hand tracking
+ * Uses MediaPipe Tasks Vision for real-time hand tracking
  */
+
+import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
 export interface HandLandmark {
   x: number;
@@ -30,9 +32,12 @@ export class GestureController {
   private videoElement: HTMLVideoElement;
   private canvasElement: HTMLCanvasElement;
   private canvasCtx: CanvasRenderingContext2D;
-  private hands: any;
-  private camera: any;
+  private handLandmarker: HandLandmarker | undefined;
+  private runningMode: 'IMAGE' | 'VIDEO' = 'VIDEO';
   private onGestureCallback?: (event: GestureEvent) => void;
+  private isProcessing: boolean = false;
+  private animationFrameId: number | null = null;
+  private lastVideoTime: number = -1;
   
   // Track state of each finger: "HandSide-FingerIndex" (e.g., "Left-1")
   private fingerStates: Map<string, FingerState> = new Map();
@@ -47,35 +52,91 @@ export class GestureController {
   }
 
   async initialize(): Promise<void> {
-    // @ts-ignore - MediaPipe loaded via CDN
-    const { Hands } = window;
-    // @ts-ignore
-    const { Camera } = window;
+    try {
+      const vision = await FilesetResolver.forVisionTasks(
+        '/mediapipe/wasm' // Local path to Wasm files
+      );
 
-    this.hands = new Hands({
-      locateFile: (file: string) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+      this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: '/mediapipe/models/hand_landmarker.task', // Local path to model
+          delegate: 'GPU'
+        },
+        runningMode: this.runningMode,
+        numHands: 2,
+        minHandDetectionConfidence: 0.5,
+        minHandPresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      // Start webcam stream by default
+      await this.setupCamera();
+      
+      // Start processing loop
+      this.predictWebcam();
+
+    } catch (error) {
+      console.error('Error initializing gesture controller:', error);
+      throw error;
+    }
+  }
+
+  async loadVideo(file: File) {
+      // Stop webcam stream if active
+      if (this.videoElement.srcObject) {
+          const stream = this.videoElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          this.videoElement.srcObject = null;
+      }
+
+      const url = URL.createObjectURL(file);
+      this.videoElement.src = url;
+      this.videoElement.loop = true;
+      this.videoElement.play();
+  }
+
+  private async setupCamera(): Promise<void> {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: 640,
+        height: 480
       }
     });
 
-    this.hands.setOptions({
-      maxNumHands: 2, // Enable two hands
-      modelComplexity: 1, // Slight increase for better joint accuracy
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
+    this.videoElement.srcObject = stream;
+    
+    return new Promise((resolve) => {
+      this.videoElement.onloadedmetadata = () => {
+        this.videoElement.play();
+        resolve();
+      };
     });
+  }
 
-    this.hands.onResults((results: any) => this.onResults(results));
+  private async predictWebcam() {
+    this.isProcessing = true;
+    
+    // Resize canvas to match video dimensions if needed
+    if (this.videoElement.videoWidth !== this.canvasElement.width) {
+        this.canvasElement.width = this.videoElement.videoWidth;
+        this.canvasElement.height = this.videoElement.videoHeight;
+    }
 
-    this.camera = new Camera(this.videoElement, {
-      onFrame: async () => {
-        await this.hands.send({ image: this.videoElement });
-      },
-      width: 640,
-      height: 480
-    });
+    if (this.handLandmarker && this.videoElement.currentTime !== this.lastVideoTime) {
+      this.lastVideoTime = this.videoElement.currentTime;
+      const startTimeMs = performance.now();
+      const results = this.handLandmarker.detectForVideo(this.videoElement, startTimeMs);
+      
+      this.onResults(results);
+    }
 
-    await this.camera.start();
+    if (this.isProcessing) {
+      this.animationFrameId = requestAnimationFrame(() => this.predictWebcam());
+    }
   }
 
   private onResults(results: any): void {
@@ -87,13 +148,25 @@ export class GestureController {
     this.canvasCtx.scale(-1, 1);
     this.canvasCtx.translate(-this.canvasElement.width, 0);
     
-    this.canvasCtx.drawImage(results.image, 0, 0, this.canvasElement.width, this.canvasElement.height);
+    // Draw video frame
+    this.canvasCtx.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
 
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      results.multiHandLandmarks.forEach((landmarks: HandLandmark[], index: number) => {
-        const handedness = results.multiHandedness[index].label; // "Left" or "Right"
-        this.processHand(landmarks, handedness);
-        this.drawHand(landmarks, handedness);
+    if (results.landmarks && results.landmarks.length > 0) {
+      results.landmarks.forEach((landmarks: HandLandmark[], index: number) => {
+        // Handle handedness
+        // MediaPipe New API returns 'handedness' array
+        // Each entry has categoryName: "Left" | "Right"
+        // Note: Camera is mirrored, so "Left" from model corresponds to user's Right hand visually if unmirrored?
+        // But we are drawing mirrored. 
+        // Let's rely on the label from the model. 
+        // In mirrored view: Model 'Left' = User Right Hand (visually on right side of screen).
+        // Let's stick to the label for ID generation.
+        
+        const handednessEntry = results.handedness[index][0];
+        const handednessLabel = handednessEntry.categoryName; 
+
+        this.processHand(landmarks, handednessLabel);
+        this.drawHand(landmarks, handednessLabel);
       });
     } else {
         // Safety: ensure all notes stop if hands disappear
@@ -116,7 +189,7 @@ export class GestureController {
               // Note: This logic must match processHand mapping
               let noteIndex = 0;
               let octave = 4;
-              if (handedness === 'Left') {
+              if (handedness === 'Right') {
                   octave = 5; 
                   noteIndex = fingerIndex;
               } else {
@@ -136,10 +209,9 @@ export class GestureController {
   }
 
   private processHand(landmarks: HandLandmark[], handedness: string): void {
-    // MediaPipe "Left" is the person's left hand.
-    // Mapping:
-    // Left Hand (Bass): Pinky(0) -> Thumb(4) maps to Notes 0->4
-    // Right Hand (Treble): Thumb(0) -> Pinky(4) maps to Notes 0->4
+    // MediaPipe Handedness:
+    // "Left" = Left Hand
+    // "Right" = Right Hand
     
     // Finger Indices in Landmarks:
     // Thumb: 1-4 (Tip 4)
@@ -177,22 +249,17 @@ export class GestureController {
       const tipY = landmarks[finger.tip].y;
 
       // Note Mapping
-      // SWAPPED LOGIC based on user feedback
-      
       let noteIndex = 0;
       let octave = 4; 
 
-      if (handedness === 'Left') {
-        // User says Left is currently High, but wants Right High.
-        // Wait, User said: "right hand is playing a low octave... please switch".
-        // My previous code had handedness==='Left' -> Low.
-        // If User saw Right=Low, then 'Left' label was triggering for Right Hand.
-        // So to make Right=High, we set 'Left' label -> High.
-        
+      if (handedness === 'Right') {
+        // Model "Right" = Visual Right (User's Right Hand in Mirror Mode)
+        // User wants Right Hand = High Octave
         octave = 5; // Treble (High)
         noteIndex = fingerIndex; // Thumb=0 (Piano style for right hand)
       } else {
-        // Label 'Right' (User's Left) -> Low
+        // Model "Left" = Visual Left (User's Left Hand in Mirror Mode)
+        // User wants Left Hand = Low Octave
         octave = 3; // Bass (Low)
         noteIndex = 4 - fingerIndex; // Pinky=0
       }
@@ -232,8 +299,11 @@ export class GestureController {
 
           } else if (isBent && state.isActive) {
             // Modulation
-            const deltaY = state.startY - tipY; 
-            const pitchBend = Math.max(-1, Math.min(1, deltaY * 2)); 
+            // Calculate vertical movement relative to start
+            // Moving UP (negative delta) -> Pitch Bend UP
+            // Moving DOWN (positive delta) -> Pitch Bend DOWN
+            const deltaY = state.startY - tipY; // Positive = Moved Up
+            const pitchBend = Math.max(-1, Math.min(1, deltaY * 2)); // Scale factor
             
             this.emit({
               type: 'modulate',
@@ -277,15 +347,7 @@ export class GestureController {
     const angleRad = Math.acos(dot / (mag1 * mag2));
     const angleDeg = angleRad * (180 / Math.PI);
 
-    // Thresholds (Finger straight is ~0 deg deviation from straight line, or 180 deg depending on vector direction)
-    // Vectors here are Base->Joint and Joint->Tip. If finger is straight, vectors point same way -> 0 deg angle?
-    // Wait, dot product of parallel vectors is 1. acos(1) = 0.
-    // So Straight = 0 degrees deviation. Bent = Higher degrees.
-    
-    // Empirically:
-    // Straight finger: Vectors align. Angle ~ 0.
-    // Bent finger: Angle increases.
-    
+    // Thresholds
     // Adjust for thumb (it behaves differently)
     const threshold = isThumb ? 30 : 50; 
     
@@ -364,8 +426,23 @@ export class GestureController {
   }
 
   stop(): void {
-    if (this.camera) {
-      this.camera.stop();
+    this.isProcessing = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
+    // Stop camera stream
+    if (this.videoElement.srcObject) {
+        const stream = this.videoElement.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        this.videoElement.srcObject = null;
+    }
+    
+    // Cleanup MediaPipe
+    if (this.handLandmarker) {
+        this.handLandmarker.close();
+        this.handLandmarker = undefined;
     }
   }
 }

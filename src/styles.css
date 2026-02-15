@@ -63,6 +63,39 @@ body {
     flex-wrap: nowrap;
 }
 
+/* Header Icon Button */
+.icon-btn-header {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.icon-btn-header:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.05);
+}
+
+.icon-btn-header svg {
+    width: 20px;
+    height: 20px;
+    stroke: rgba(255,255,255,0.9);
+}
+
+.icon-btn-header.active {
+    background: #4ECDC4;
+    border-color: #4ECDC4;
+    box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+}
+
 .vol-group {
     justify-content: space-between;
 }
@@ -399,7 +432,7 @@ body {
     .sidebar { padding: 5px 10px; gap: 5px; background: rgba(255, 255, 255, 0.03); align-self: stretch; }
     .top-bar { padding: 5px 10px; gap: 5px; }
     .top-bar h1 { font-size: 1.0em; }
-    .top-bar-controls { gap: 8px; width: 100%; justify-content: center; }
+    .top-bar-controls { gap: 8px; width: 100%; justify-content: space-between; }
     #note-display { display: none; }
     .main-content { gap: 2px; }
     .control-group { gap: 4px; }
@@ -448,6 +481,30 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+}
+
+.gesture-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.icon-btn {
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: transform 0.2s;
+    background: rgba(255,255,255,0.1);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.icon-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255,255,255,0.2);
 }
 
 .gesture-header h3 {

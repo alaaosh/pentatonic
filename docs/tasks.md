@@ -27,7 +27,7 @@ This document outlines the step-by-step plan to build the modular Pentatonic Syn
     - [ ] 10.1 Implement Modulation "Ripples" on Canvas.
     - [ ] 10.2 Add background FFT Spectrum Visualizer.
 
-## Phase 5: Gesture Control Refinement (NEW - EXPERIMENTAL)
+## Phase 5: Gesture Control Refinement (COMPLETED)
 - [x] **11. Basic Gesture Control (Proof of Concept)**
     - [x] 11.1 Integrate MediaPipe Hands library.
     - [x] 11.2 Implement hand landmark detection and visualization.
@@ -50,24 +50,27 @@ This document outlines the step-by-step plan to build the modular Pentatonic Syn
     - [ ] 14.3 Add performance monitoring dashboard.
     - [ ] 14.4 Optimize canvas rendering (only redraw on changes).
 
-## Phase 6: Enhanced Gesture Mapping
-- [ ] **15. Multi-Hand Polyphony**
-    - [ ] 15.1 Track both hands simultaneously (left/right identification).
-    - [ ] 15.2 Assign left hand to bass notes (octaves 2-3).
-    - [ ] 15.3 Assign right hand to melody notes (octaves 4-5).
-    - [ ] 15.4 Implement collision detection for overlapping hands.
-    - [ ] 15.5 Add visual distinction for each hand in overlay.
+## Phase 6: Enhanced Gesture Mapping (IN PROGRESS)
+- [x] **15. Multi-Hand Polyphony (Air Piano)**
+    - [x] 15.1 Track both hands simultaneously (left/right identification).
+    - [x] 15.2 Assign left hand to bass notes (octaves 2-3).
+    - [x] 15.3 Assign right hand to melody notes (octaves 4-5).
+    - [x] 15.4 Implement finger-bend detection for 10-finger mapping.
+    - [x] 15.5 Add visual distinction for each hand in overlay.
+    - [x] 15.6 Add pitch modulation via vertical hand movement.
 - [ ] **16. Advanced Gesture Parameters**
     - [ ] 16.1 Map palm rotation to filter cutoff frequency.
     - [ ] 16.2 Map wrist angle to resonance amount.
     - [ ] 16.3 Map hand tilt to stereo panning.
     - [ ] 16.4 Map finger spread to chord voicing.
     - [ ] 16.5 Implement dynamic gestures (swipe velocity → attack time).
-- [ ] **17. Custom Gesture Training**
-    - [ ] 17.1 Record gesture sequences with timing.
-    - [ ] 17.2 Train simple ML classifier (TensorFlow.js).
-    - [ ] 17.3 Map custom gestures to macros (preset changes, effects).
-    - [ ] 17.4 Add gesture profile import/export.
+- [x] **17. Offline Support & Video Interpretation (COMPLETED)**
+    - [x] 17.1 Install MediaPipe assets locally (remove CDN dependency).
+    - [x] 17.2 Implement "Upload Video" feature for offline analysis.
+    - [x] 17.3 Add playback controls for video interpretation.
+    - [x] 17.4 Sync gesture processing loop with video playback.
+    - [x] 17.5 Refine UI: Move camera toggle to top bar, update icons.
+    - [x] 17.6 Implement background play mode (hide panel without stopping).
 
 ## Phase 7: Preset System
 - [ ] **18. Sound Persistence**
