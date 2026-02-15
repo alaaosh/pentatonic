@@ -53,13 +53,14 @@ export class GestureController {
 
   async initialize(): Promise<void> {
     try {
+      // Use relative paths for GitHub Pages compatibility
       const vision = await FilesetResolver.forVisionTasks(
-        '/mediapipe/wasm' // Local path to Wasm files
+        'mediapipe/wasm' // Relative path
       );
 
       this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: '/mediapipe/models/hand_landmarker.task', // Local path to model
+          modelAssetPath: 'mediapipe/models/hand_landmarker.task', // Relative path
           delegate: 'GPU'
         },
         runningMode: this.runningMode,
