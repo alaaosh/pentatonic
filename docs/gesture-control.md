@@ -1,69 +1,58 @@
-# Gesture Control - Proof of Concept
+# Gesture Control - Air Piano
 
 ## Overview
 
-The Pentatonic Synth now includes experimental camera-based hand gesture control using MediaPipe Hands for real-time hand tracking.
+The Pentatonic Synth features a revolutionary "Air Piano" interface that allows you to play using natural hand gestures. By tracking the bending of individual fingers, the system enables full polyphonic expression without touching the screen.
 
 ## How It Works
 
-1. Click the "📷 Camera Control" button in the bottom-right corner
-2. Allow camera permissions when prompted
-3. Position your hand in front of the camera
-4. Use these gestures to play:
+1. Click the "📷 Camera Control" button in the bottom-right corner.
+2. Allow camera permissions.
+3. Position **both hands** in front of the camera.
+4. **Bend a finger** to play a note.
+5. **Straighten** the finger to stop the note.
+6. **Move your hand up/down** while holding a note to bend the pitch (vibrato).
 
-### Gesture Mapping
+## Finger Mapping (10 Notes)
 
-- **Index Finger X Position**: Controls which of the 5 pentatonic notes to play
-  - Left edge = Note 1
-  - Right edge = Note 5
-  
-- **Index Finger Y Position**: Controls octave (3 levels)
-  - Top of frame = Octave 5 (high)
-  - Middle = Octave 4 (mid)
-  - Bottom = Octave 3 (low)
+The system maps your 10 fingers to two octaves of the pentatonic scale, creating a linear progression from left to right.
 
-- **Pinch (Thumb + Index)**: Activates/plays the note
-  - Bring thumb and index finger together to trigger sound
-  - Release to stop the note
+### Left Hand (Bass - Octave 3)
 
-- **Z Depth**: Controls velocity/volume
-  - Closer to camera = louder
-  - Further from camera = quieter
+| Finger | Note Index | Role |
+| :--- | :--- | :--- |
+| **Pinky** | 0 | Root |
+| **Ring** | 1 | 2nd |
+| **Middle** | 2 | 3rd |
+| **Index** | 3 | 5th |
+| **Thumb** | 4 | 6th |
 
-## Technical Details
+### Right Hand (Melody - Octave 5)
 
-### Dependencies
+| Finger | Note Index | Role |
+| :--- | :--- | :--- |
+| **Thumb** | 0 | Root |
+| **Index** | 1 | 2nd |
+| **Middle** | 2 | 3rd |
+| **Ring** | 3 | 5th |
+| **Pinky** | 4 | 6th |
 
-- MediaPipe Hands (loaded via CDN)
-- MediaPipe Camera Utils (loaded via CDN)
+## Visual Feedback
 
-### Implementation
+- **Skeleton Overlay**: Shows the real-time tracking of your hand joints.
+- **Yellow Dots**: Inactive fingers.
+- **Red Dots**: Active (playing) fingers.
 
-- `GestureController.ts`: Main gesture tracking and mapping logic
-- Hand landmark detection using 21 key points
-- Real-time gesture extraction at camera frame rate
-- Visual feedback showing hand skeleton overlay
+## Technical Implementation
 
-### Performance
+- **Library**: MediaPipe Hands (via CDN)
+- **Detection**: Joint-angle calculation (dot product of vectors)
+- **Polyphony**: Independent state tracking for all 10 fingers
+- **Modulation**: Relative Y-axis movement during active state triggers pitch bend
 
-- Model Complexity: 0 (fastest, less accurate - suitable for prototype)
-- Detection Confidence: 0.5
-- Tracking Confidence: 0.5
-- Max Hands: 1
+## Tips for Performance
 
-## Limitations (Proof of Concept)
-
-- Single hand tracking only
-- Requires good lighting conditions
-- Pinch detection threshold may need tuning
-- No gesture smoothing/filtering (can be jittery)
-- Camera must remain active while panel is open
-
-## Future Improvements
-
-- Multi-hand support for polyphonic playing
-- Gesture smoothing and prediction
-- Custom gesture training
-- Hand orientation for additional parameters
-- Finger spread for chord voicing
-- Palm distance for effects control
+- **Lighting**: Ensure your hands are well-lit.
+- **Background**: A plain background helps tracking stability.
+- **Distance**: Keep hands about 1-2 feet from the camera.
+- **Separation**: Try to keep fingers slightly separated so the camera can see the joints clearly.

@@ -69,15 +69,14 @@ graph TB
 - **DialWidget**: NS-resize based knobs for synthesis parameters.
 - **VerticalSlider**: Dedicated high-resolution volume control.
 
-### 3.5. GestureController (NEW)
-- **MediaPipe Integration**: Leverages Google's MediaPipe Hands for real-time hand tracking (21 landmarks per hand).
-- **Gesture Mapping**:
-  - Index finger X position → Note selection (5 zones)
-  - Index finger Y position → Octave selection (3 levels)
-  - Thumb-Index pinch distance → Note trigger (threshold-based)
-  - Index finger Z depth → Velocity/volume
-- **Visual Feedback**: Canvas overlay showing hand skeleton and landmarks.
-- **Performance**: Model complexity 0 (fastest) for low-latency prototype.
+### 3.5. GestureController (Air Piano)
+- **MediaPipe Integration**: Tracks 2 hands simultaneously (42 landmarks total).
+- **Finger Bend Detection**: Calculates joint angles to determine "Note On" (Bent < 150°) vs "Note Off" (Straight).
+- **Polyphony**: Supports 10 simultaneous voices (one per finger).
+- **Mapping**:
+  - Left Hand: Bass Octave (Notes 0-4 mapped Pinky→Thumb)
+  - Right Hand: Melody Octave (Notes 0-4 mapped Thumb→Pinky)
+- **Modulation**: Relative Y-axis movement of a bent finger controls Pitch Bend ($\pm 1$ semitone).
 
 ## 4. Data Models
 

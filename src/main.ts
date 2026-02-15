@@ -45,7 +45,8 @@ const touch = new TouchHandler(canvas, renderer);
 
 // Gesture Controller (initialized on demand)
 let gestureController: GestureController | null = null;
-let activeGestureNote: { index: number; octave: number } | null = null;
+// Track which voices are active for which fingers to enable polyphony
+const activeFingerVoices: Map<string, { index: number, octave: number }> = new Map();
 
 // --- Widget Initializations ---
 
@@ -224,43 +225,36 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
                 gestureController = new GestureController(gestureVideo, gestureCanvas);
                 await gestureController.initialize();
                 
-                gestureController.onGesture((gesture) => {
-                    // Handle gesture -> note mapping
-                    if (gesture.isActive) {
-                        // Start or continue note
-                        if (!activeGestureNote || 
-                            activeGestureNote.index !== gesture.noteIndex || 
-                            activeGestureNote.octave !== gesture.octave) {
-                            
-                            // Stop previous note if exists
-                            if (activeGestureNote) {
-                                globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
-                                    index: activeGestureNote.index,
-                                    octave: activeGestureNote.octave
-                                });
-                            }
-                            
-                            // Start new note
-                            const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, gesture.noteIndex, gesture.octave);
-                            globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
-                                index: gesture.noteIndex,
-                                frequency: freq,
-                                velocity: gesture.velocity,
-                                harmonyType: currentHarmony,
-                                chordType: currentChordType,
-                                octave: gesture.octave
-                            });
-                            
-                            activeGestureNote = { index: gesture.noteIndex, octave: gesture.octave };
+                gestureController.onGesture((event) => {
+                    const voiceId = event.fingerId; // Use finger ID (e.g., "Left-0") as voice ID for polyphony
+
+                    if (event.type === 'start') {
+                        // 1. Generate frequencies
+                        const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, event.octave);
+                        const rootNote = notes[event.noteIndex];
+                        if (rootNote) {
+                             const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, currentHarmony, currentChordType);
+                             const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (event.octave - 4)));
+                             
+                             audio.triggerNote(voiceId, frequencies, currentHarmony);
+                             activeFingerVoices.set(voiceId, { index: event.noteIndex, octave: event.octave });
+                             
+                             // Visual feedback (optional: light up the key)
+                             renderer.setActive(event.noteIndex, event.octave, true);
                         }
-                    } else {
-                        // Stop note
-                        if (activeGestureNote) {
-                            globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
-                                index: activeGestureNote.index,
-                                octave: activeGestureNote.octave
-                            });
-                            activeGestureNote = null;
+
+                    } else if (event.type === 'stop') {
+                        audio.stopNote(voiceId);
+                        const noteData = activeFingerVoices.get(voiceId);
+                        if (noteData) {
+                            renderer.setActive(noteData.index, noteData.octave, false);
+                            activeFingerVoices.delete(voiceId);
+                        }
+
+                    } else if (event.type === 'modulate') {
+                        if (event.pitchBend !== undefined) {
+                            // Timbre can be mapped to X-axis deviation or Z-depth in future
+                            audio.modulateNote(voiceId, event.pitchBend, 0); 
                         }
                     }
                 });
@@ -277,14 +271,13 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
     gestureCloseBtn.addEventListener('click', () => {
         gesturePanel.classList.add('hidden');
         
-        // Stop any active gesture note
-        if (activeGestureNote) {
-            globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
-                index: activeGestureNote.index,
-                octave: activeGestureNote.octave
-            });
-            activeGestureNote = null;
-        }
+        // Stop all active gesture notes
+        activeFingerVoices.forEach((noteData, voiceId) => {
+            audio.stopNote(voiceId);
+            renderer.setActive(noteData.index, noteData.octave, false);
+        });
+        activeFingerVoices.clear();
+        gestureController?.stop();
     });
 }
 

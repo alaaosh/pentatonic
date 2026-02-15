@@ -1,94 +1,47 @@
-# Gesture Control Mapping
+# Gesture Control Mapping (Air Piano)
 
 ## Visual Guide
 
-```
-Camera View (640x480)
-┌─────────────────────────────────────────┐
-│  Octave 5 (High)                        │
-│  ┌───┬───┬───┬───┬───┐                  │
-│  │ 1 │ 2 │ 3 │ 4 │ 5 │  ← Index X Pos  │
-│  └───┴───┴───┴───┴───┘                  │
-├─────────────────────────────────────────┤
-│  Octave 4 (Mid)                         │
-│  ┌───┬───┬───┬───┬───┐                  │
-│  │ 1 │ 2 │ 3 │ 4 │ 5 │  ← Index Y Pos  │
-│  └───┴───┴───┴───┴───┘                  │
-├─────────────────────────────────────────┤
-│  Octave 3 (Low)                         │
-│  ┌───┬───┬───┬───┬───┐                  │
-│  │ 1 │ 2 │ 3 │ 4 │ 5 │                  │
-│  └───┴───┴───┴───┴───┘                  │
-└─────────────────────────────────────────┘
-```
-
-## Hand Landmarks Used
-
-MediaPipe Hands provides 21 landmarks per hand:
+The "Air Piano" mapping uses your 10 fingers to play notes. The progression is linear from left to right, similar to a piano keyboard.
 
 ```
-        8 (Index Tip) ← Primary control point
-       /
-      7
-     /
-    6
-   /
-  5
-   \
-    \  4 (Thumb Tip) ← Pinch detection
-     \
-      3
-       \
-        2
-         \
-          1
-           \
-            0 (Wrist)
+       LEFT HAND (Bass)                     RIGHT HAND (Melody)
+      (Octave 3 - Low)                      (Octave 5 - High)
+
+      Pinky Ring Mid  Idx  Thumb       Thumb Idx  Mid  Ring Pinky
+      ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐       ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐
+Note: │ 0 │ │ 1 │ │ 2 │ │ 3 │ │ 4 │       │ 0 │ │ 1 │ │ 2 │ │ 3 │ │ 4 │
+      └───┘ └───┘ └───┘ └───┘ └───┘       └───┘ └───┘ └───┘ └───┘ └───┘
 ```
 
 ## Gesture Detection Logic
 
-### Note Selection
-```typescript
-// X position (0-1) → Note index (0-4)
-noteIndex = floor(indexTip.x * 5)
-// Maps: 0.0-0.2 → 0, 0.2-0.4 → 1, etc.
-```
+### 1. Finger Bend (Trigger)
+Instead of tracking position on a grid, the system detects when you **bend a finger**.
 
-### Octave Selection
-```typescript
-// Y position (0-1) → Octave (5-3)
-octave = floor(5 - indexTip.y * 2)
-// Maps: 0.0-0.33 → 5, 0.33-0.66 → 4, 0.66-1.0 → 3
-```
+- **Straight Finger (Angle ~180°)**: Note OFF
+- **Bent Finger (Angle < 150°)**: Note ON
 
-### Pinch Detection
-```typescript
-// Distance between thumb tip and index tip
-distance = sqrt((thumb.x - index.x)² + (thumb.y - index.y)²)
-isActive = distance < 0.08  // Threshold
-```
+### 2. Pitch Modulation (Vibrato)
+While a finger is held bent (Note ON):
+- **Move Hand UP**: Bends pitch UP (+1 semitone max)
+- **Move Hand DOWN**: Bends pitch DOWN (-1 semitone max)
 
-### Velocity/Volume
-```typescript
-// Z depth (closer = louder)
-velocity = 1 - (indexTip.z + 0.1)
-// Clamped to 0-1 range
-```
+### 3. Special Gestures
+- **Closed Fist**: Making a fist (bending 4 or more fingers simultaneously) will **Stop/Fade** all notes on that hand. This is useful for quickly cutting sound.
+- **Hands Outside Frame**: If your hands leave the camera view, all sound stops immediately.
 
-## Tips for Best Results
+## Hand Landmarks Used
 
-1. **Lighting**: Ensure good, even lighting on your hand
-2. **Background**: Plain backgrounds work best
-3. **Distance**: Keep hand 1-2 feet from camera
-4. **Orientation**: Palm facing camera works best
-5. **Movement**: Smooth, deliberate movements reduce jitter
-6. **Pinch**: Clear pinch gesture (thumb and index touching)
+MediaPipe Hands tracks 21 landmarks. We calculate the angle between three points for each finger to detect bending.
+
+**Example: Index Finger**
+- **Base**: Landmark 5 (MCP)
+- **Joint**: Landmark 6 (PIP) - *We measure the angle here*
+- **Tip**: Landmark 8 (TIP)
 
 ## Troubleshooting
 
-- **No hand detected**: Check lighting and camera permissions
-- **Jittery notes**: Move hand more slowly, consider adding smoothing
-- **Wrong notes**: Calibrate by testing each zone systematically
-- **No sound**: Ensure pinch gesture is clear (fingers touching)
-- **Latency**: Close other applications, use faster device
+- **False Triggers**: If notes play when your fingers are straight, try moving further from the camera.
+- **Missing Notes**: If bending doesn't trigger a note, ensure the lighting is good and the camera can see your finger joints clearly.
+- **Thumb Issues**: Thumbs move differently than fingers. Try bending the tip of your thumb inward clearly.
