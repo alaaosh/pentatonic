@@ -5,6 +5,7 @@ import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { DialWidget } from './ui/DialWidget';
 import { VerticalSlider } from './ui/VerticalSlider';
+import { GestureController } from './gesture/GestureController';
 import { globalEvents, EventType, NoteOnEvent, NoteOffEvent, NoteModulateEvent } from './utils/EventProcessor';
 import './styles.css';
 
@@ -26,6 +27,13 @@ const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
 
+// Gesture Control Elements
+const gestureToggleBtn = document.getElementById('gesture-toggle');
+const gesturePanel = document.getElementById('gesture-panel');
+const gestureCloseBtn = document.getElementById('gesture-close');
+const gestureVideo = document.getElementById('gesture-video') as HTMLVideoElement;
+const gestureCanvas = document.getElementById('gesture-canvas') as HTMLCanvasElement;
+
 if (!canvas) {
     throw new Error('Canvas element not found');
 }
@@ -34,6 +42,10 @@ if (!canvas) {
 const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
 const touch = new TouchHandler(canvas, renderer);
+
+// Gesture Controller (initialized on demand)
+let gestureController: GestureController | null = null;
+let activeGestureNote: { index: number; octave: number } | null = null;
 
 // --- Widget Initializations ---
 
@@ -200,5 +212,80 @@ updateLayout();
 document.addEventListener('touchmove', (e) => {
     if (e.target === canvas) e.preventDefault();
 }, { passive: false });
+
+// --- Gesture Control Logic ---
+
+if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
+    gestureToggleBtn.addEventListener('click', async () => {
+        if (!gestureController) {
+            try {
+                gestureCanvas.width = 640;
+                gestureCanvas.height = 480;
+                gestureController = new GestureController(gestureVideo, gestureCanvas);
+                await gestureController.initialize();
+                
+                gestureController.onGesture((gesture) => {
+                    // Handle gesture -> note mapping
+                    if (gesture.isActive) {
+                        // Start or continue note
+                        if (!activeGestureNote || 
+                            activeGestureNote.index !== gesture.noteIndex || 
+                            activeGestureNote.octave !== gesture.octave) {
+                            
+                            // Stop previous note if exists
+                            if (activeGestureNote) {
+                                globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
+                                    index: activeGestureNote.index,
+                                    octave: activeGestureNote.octave
+                                });
+                            }
+                            
+                            // Start new note
+                            const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, gesture.noteIndex, gesture.octave);
+                            globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
+                                index: gesture.noteIndex,
+                                frequency: freq,
+                                velocity: gesture.velocity,
+                                harmonyType: currentHarmony,
+                                chordType: currentChordType,
+                                octave: gesture.octave
+                            });
+                            
+                            activeGestureNote = { index: gesture.noteIndex, octave: gesture.octave };
+                        }
+                    } else {
+                        // Stop note
+                        if (activeGestureNote) {
+                            globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
+                                index: activeGestureNote.index,
+                                octave: activeGestureNote.octave
+                            });
+                            activeGestureNote = null;
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to initialize gesture control:', error);
+                alert('Camera access required for gesture control. Please allow camera permissions.');
+                return;
+            }
+        }
+        
+        gesturePanel.classList.toggle('hidden');
+    });
+    
+    gestureCloseBtn.addEventListener('click', () => {
+        gesturePanel.classList.add('hidden');
+        
+        // Stop any active gesture note
+        if (activeGestureNote) {
+            globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, {
+                index: activeGestureNote.index,
+                octave: activeGestureNote.octave
+            });
+            activeGestureNote = null;
+        }
+    });
+}
 
 console.log('Pentatonic Synth Initialized');

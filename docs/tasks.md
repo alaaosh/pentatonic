@@ -27,13 +27,82 @@ This document outlines the step-by-step plan to build the modular Pentatonic Syn
     - [ ] 10.1 Implement Modulation "Ripples" on Canvas.
     - [ ] 10.2 Add background FFT Spectrum Visualizer.
 
-## Phase 5: Preset System
-- [ ] **11. Sound Persistence**
-    - [ ] 11.1 Create Factory Preset bank.
-    - [ ] 11.2 Implement LocalStorage Save/Load for User Patches.
-    - [ ] 11.3 Add Preset Selection UI component.
+## Phase 5: Gesture Control Refinement (NEW - EXPERIMENTAL)
+- [x] **11. Basic Gesture Control (Proof of Concept)**
+    - [x] 11.1 Integrate MediaPipe Hands library.
+    - [x] 11.2 Implement hand landmark detection and visualization.
+    - [x] 11.3 Map index finger position to note/octave selection.
+    - [x] 11.4 Implement pinch detection for note triggering.
+    - [x] 11.5 Add gesture control UI panel with camera feed.
+- [ ] **12. Gesture Smoothing & Stability**
+    - [ ] 12.1 Implement Kalman filter for position smoothing.
+    - [ ] 12.2 Add exponential moving average for velocity calculations.
+    - [ ] 12.3 Implement gesture prediction for latency compensation.
+    - [ ] 12.4 Add confidence thresholds to filter low-quality detections.
+- [ ] **13. Adaptive Calibration**
+    - [ ] 13.1 Auto-detect hand size and adjust pinch thresholds.
+    - [ ] 13.2 Create camera distance calibration wizard.
+    - [ ] 13.3 Save user calibration profiles to localStorage.
+    - [ ] 13.4 Add visual feedback during calibration process.
+- [ ] **14. Performance Optimization**
+    - [ ] 14.1 Move gesture processing to Web Worker.
+    - [ ] 14.2 Implement frame skipping for lower-end devices.
+    - [ ] 14.3 Add performance monitoring dashboard.
+    - [ ] 14.4 Optimize canvas rendering (only redraw on changes).
 
-## Phase 6: Optimization
-- [ ] **12. Performance**
-    - [ ] 12.1 Object pooling for visuals.
-    - [ ] 12.2 Audio voice recycling optimizations.
+## Phase 6: Enhanced Gesture Mapping
+- [ ] **15. Multi-Hand Polyphony**
+    - [ ] 15.1 Track both hands simultaneously (left/right identification).
+    - [ ] 15.2 Assign left hand to bass notes (octaves 2-3).
+    - [ ] 15.3 Assign right hand to melody notes (octaves 4-5).
+    - [ ] 15.4 Implement collision detection for overlapping hands.
+    - [ ] 15.5 Add visual distinction for each hand in overlay.
+- [ ] **16. Advanced Gesture Parameters**
+    - [ ] 16.1 Map palm rotation to filter cutoff frequency.
+    - [ ] 16.2 Map wrist angle to resonance amount.
+    - [ ] 16.3 Map hand tilt to stereo panning.
+    - [ ] 16.4 Map finger spread to chord voicing.
+    - [ ] 16.5 Implement dynamic gestures (swipe velocity → attack time).
+- [ ] **17. Custom Gesture Training**
+    - [ ] 17.1 Record gesture sequences with timing.
+    - [ ] 17.2 Train simple ML classifier (TensorFlow.js).
+    - [ ] 17.3 Map custom gestures to macros (preset changes, effects).
+    - [ ] 17.4 Add gesture profile import/export.
+
+## Phase 7: Preset System
+- [ ] **18. Sound Persistence**
+    - [ ] 18.1 Create Factory Preset bank.
+    - [ ] 18.2 Implement LocalStorage Save/Load for User Patches.
+    - [ ] 18.3 Add Preset Selection UI component.
+    - [ ] 18.4 Include gesture mappings in preset schema.
+
+## Phase 8: Optimization & Polish
+- [ ] **19. Performance**
+    - [ ] 19.1 Object pooling for visuals.
+    - [ ] 19.2 Audio voice recycling optimizations.
+    - [ ] 19.3 Bundle size optimization and lazy loading.
+    - [ ] 19.4 Memory leak prevention and profiling.
+
+## Phase 9: Advanced Features (Long-term)
+- [ ] **20. Recording & Looping**
+    - [ ] 20.1 Record gesture sequences with timing.
+    - [ ] 20.2 Multi-track loop station (4-8 tracks).
+    - [ ] 20.3 Overdub and undo functionality.
+    - [ ] 20.4 Export to MIDI or audio (WAV).
+- [ ] **21. Spatial Audio**
+    - [ ] 21.1 Implement Web Audio API Panner nodes.
+    - [ ] 21.2 Map hand position to 3D audio position.
+    - [ ] 21.3 Add HRTF-based binaural audio.
+- [ ] **22. Collaborative Performance**
+    - [ ] 22.1 WebRTC peer-to-peer audio streaming.
+    - [ ] 22.2 Synchronized playback across devices.
+    - [ ] 22.3 Shared session state management.
+- [ ] **23. Mobile & Cross-Platform**
+    - [ ] 23.1 Optimize for mobile cameras and touch screens.
+    - [ ] 23.2 PWA support with offline capabilities.
+    - [ ] 23.3 Native app development (Electron/React Native).
+- [ ] **24. AI-Assisted Features**
+    - [ ] 24.1 AI chord progression suggestions.
+    - [ ] 24.2 Style transfer and auto-harmonization.
+    - [ ] 24.3 Gesture completion prediction.
+    - [ ] 24.4 Personalized preset recommendations.

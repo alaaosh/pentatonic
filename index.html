@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pentatonic Harmony Instrument</title>
     <link rel="stylesheet" href="/src/styles.css">
+    <!-- MediaPipe Hands for gesture control -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div id="audio-unlock" class="unlock-overlay">
@@ -116,6 +119,23 @@
                 aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
             
             <div id="note-display" aria-live="polite">Touch to play</div>
+            
+            <!-- Gesture Control Panel -->
+            <div id="gesture-panel" class="gesture-panel hidden">
+                <div class="gesture-header">
+                    <h3>Camera Gesture Control</h3>
+                    <button id="gesture-close" class="gesture-close-btn">×</button>
+                </div>
+                <video id="gesture-video" class="gesture-video" autoplay playsinline></video>
+                <canvas id="gesture-canvas" class="gesture-canvas"></canvas>
+                <div class="gesture-info">
+                    <p>Move index finger left/right for notes (5 zones)</p>
+                    <p>Move up/down for octave (3 levels)</p>
+                    <p>Pinch thumb+index to play</p>
+                </div>
+            </div>
+            
+            <button id="gesture-toggle" class="gesture-toggle-btn">📷 Camera Control</button>
         </main>
 
         <aside class="sidebar sidebar-right">
