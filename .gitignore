@@ -27,4 +27,5 @@ yarn-error.log*
 
 # Project specific
 .kiro/
-.gemini/public/mediapipe/
+.gemini/
+public/mediapipe/
