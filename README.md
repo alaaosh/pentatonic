@@ -66,6 +66,7 @@ npm run build
 
 - **Touch/Mouse**: Tap/click the colored zones. Vertical position determines the octave (Bottom/Mid/Top).
 - **Keyboard**: Keys `A`, `S`, `D`, `F`, `G` map to the five pentatonic notes (Center Octave).
+- **Camera Gestures** (Experimental): Click the camera button to enable hand gesture control. Move your index finger to select notes, pinch thumb+index to play.
 - **UI Widgets**:
     - **Root Grid**: Select the fundamental key.
     - **Octave Slider**: Move the three pegs (Dark/Mid/Light grey) to set the octave for each UI row.
@@ -76,6 +77,7 @@ npm run build
 - [Design Architecture](./docs/design.md)
 - [Requirements](./docs/requirements.md)
 - [Implementation Tasks](./docs/tasks.md)
+- [Gesture Control (Experimental)](./docs/gesture-control.md)
 
 ## License
 

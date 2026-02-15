@@ -13,7 +13,9 @@ The system uses a modular, event-driven architecture to decouple input handling 
 ```mermaid
 graph TB
     A[Touch/Mouse/Keyboard] --> B[TouchHandler]
+    J[Camera/Hand Gestures] --> K[GestureController]
     B --> C[EventProcessor - Pub/Sub]
+    K --> C
     C --> D[SynthesisEngine]
     C --> E[VisualRenderer]
     
@@ -24,15 +26,26 @@ graph TB
         I[VerticalSlider]
     end
     
+    subgraph "Computer Vision"
+        L[MediaPipe Hands]
+        M[Hand Landmark Detection]
+        N[Gesture Extraction]
+    end
+    
     D --> F
     E --> F
     E --> G
+    K --> L
+    L --> M
+    M --> N
+    N --> K
 ```
 
 ### 2.1. Layers
 
 - **Touch Interface Layer**: Captures multi-touch and mouse input across a 5x3 grid. Supports microtonal expression via vertical (Pitch) and horizontal (Timbre) sliding.
-- **Event Processing Layer**: Uses a global Pub/Sub bus (`EventProcessor`) to broadcast `NOTE_ON`, `NOTE_OFF`, and `NOTE_MODULATE` events.
+- **Gesture Interface Layer** (NEW): Camera-based hand tracking using MediaPipe Hands. Extracts musical parameters from 21-point hand landmarks (position, pinch detection, depth).
+- **Event Processing Layer**: Uses a global Pub/Sub bus (`EventProcessor`) to broadcast `NOTE_ON`, `NOTE_OFF`, and `NOTE_MODULATE` events from any input source.
 - **Audio Engine Layer**: Manages polyphonic synthesis, chromatic harmonic expansion, and real-time parameter modulation.
 - **Visual Feedback Layer**: High-performance Canvas renderer with responsive high-DPI scaling and octave-based brightness distinction.
 
@@ -56,6 +69,22 @@ graph TB
 - **DialWidget**: NS-resize based knobs for synthesis parameters.
 - **VerticalSlider**: Dedicated high-resolution volume control.
 
+### 3.5. GestureController (Air Piano)
+- **MediaPipe Integration**: Uses `@mediapipe/tasks-vision` for high-performance tracking.
+- **Offline Support**: Loads local `.wasm` binaries and `.task` model files from `public/mediapipe/`, removing CDN dependencies.
+- **Input Modes**:
+  - **Webcam**: Real-time stream processing.
+  - **Video File**: Analysis of uploaded video files for offline scoring.
+- **Finger Bend Detection**: Calculates joint angles to determine "Note On" (Bent < 150°) vs "Note Off" (Straight).
+- **Polyphony**: Supports 10 simultaneous voices (one per finger).
+- **Mapping**:
+  - Right Hand (Visual Right/User Right): Melody Octave (Notes 0-4 mapped Thumb→Pinky).
+  - Left Hand (Visual Left/User Left): Bass Octave (Notes 0-4 mapped Pinky→Thumb).
+- **Modulation**: Relative Y-axis movement of a bent finger controls Pitch Bend ($\pm 1$ semitone).
+- **Controls**:
+  - Toggle Button: Activates/Deactivates the camera system.
+  - Close Panel: Hides the overlay but keeps the instrument running (background play).
+
 ## 4. Data Models
 
 ### NoteModulateEvent
@@ -68,18 +97,91 @@ graph TB
 }
 ```
 
-## 5. Future Roadmap (Tone Shaping Suggestions)
+### GestureData (NEW)
+```typescript
+{
+  noteIndex: number;    // 0-4 for pentatonic notes
+  octave: number;       // 3-5 for octave range
+  velocity: number;     // 0-1 for volume/intensity
+  isActive: boolean;    // finger pinched/closed
+}
+```
 
-### 5.1. LFO Engine (Movement)
-- Implement a Low-Frequency Oscillator to modulate Pitch (Vibrato) or Filter (Tremolo/Auto-wah).
-- Add "Depth" and "Rate" dials to the dashboard.
+### HandLandmark (NEW)
+```typescript
+{
+  x: number;           // Normalized 0-1 horizontal position
+  y: number;           // Normalized 0-1 vertical position
+  z: number;           // Depth relative to wrist
+}
+```
 
-### 5.2. Filter Resonance Control
-- Add a dedicated Dial for Filter Q (Resonance) to allow for sharper, "squelchy" electronic sounds.
+### PresetSchema
+```typescript
+{
+  name: string;
+  waveform: Waveform;
+  envelope: EnvelopeParams;
+  filter: FilterParams;
+  effects: { delay: number, reverb: number };
+}
+```
 
-### 5.3. Modulation Visuals
-- Update the VisualRenderer to show a "glow" or "ripple" effect that moves with the finger during pitch and timbre modulation.
+## 5. Future Roadmap
 
-## 6. Testing & Compliance
-- **Autoplay Compliance**: "Start Instrument" overlay ensures valid user gesture.
-- **Responsive Workspace**: Landscape grid vs. Portrait stack (minimized gaps).
+### 5.1. Audio Effects Chain
+- **Stereo Delay**: Implementation of a feedback loop with `DelayNode` and `PanNode`.
+- **Global Reverb**: Convolution-based or algorithmic shimmer using a shared `ConvolverNode`.
+
+### 5.2. LFO Engine (Movement)
+- Implement a Low-Frequency Oscillator to modulate Pitch (Vibrato) or Filter (Tremolo).
+- Add "Depth" and "Rate" dials.
+
+### 5.3. Preset System
+- **Persistence**: Integration with `localStorage` for saving user-defined patches.
+- **Factory Bank**: Initial set of "Classic Lead", "Deep Bass", and "Ethereal Pad".
+
+### 5.4. Visual "Juice"
+- Update the VisualRenderer to show "glow" or "ripple" effects reactive to `NoteModulateEvent`.
+- Implement a background spectrum analyzer (Fast Fourier Transform).
+
+### 5.6. Offline & Video Support (NEW)
+- **Local Assets**: Host MediaPipe `.wasm` and model files locally to remove CDN dependency and enable air-gapped usage.
+- **Video Interpretation**:
+  - Ability to upload pre-recorded video files.
+  - Sync frame processing loop to video playback.
+  - "Score" existing videos musically based on visual gestures.
+
+#### Phase 1: Refinement (Short-term)
+- **Gesture Smoothing**: Implement Kalman filtering or exponential moving average to reduce jitter
+- **Adaptive Thresholds**: Dynamic pinch detection based on hand size and camera distance
+- **Calibration UI**: Allow users to calibrate gesture zones to their preference
+- **Performance Optimization**: Reduce model complexity impact on audio thread
+- **Multi-hand Support**: Enable two-hand polyphonic playing (left hand = bass, right hand = melody)
+
+#### Phase 2: Enhanced Mapping (Mid-term)
+- **Hand Orientation**: Use palm rotation for filter cutoff or effect wet/dry
+- **Finger Spread**: Map individual finger distances to chord voicing or arpeggio speed
+- **Gesture Velocity**: Detect swipe speed for note attack intensity
+- **Hover Distance**: Use Z-axis depth for continuous parameter control (vibrato, tremolo)
+- **Custom Gestures**: Train ML model for user-defined gesture patterns
+
+#### Phase 3: Advanced Features (Long-term)
+- **Pose-based Presets**: Switch sound presets using specific hand poses (peace sign, fist, etc.)
+- **Spatial Audio**: Map hand position to stereo panning and 3D audio positioning
+- **Recording Mode**: Capture gesture sequences for playback/looping
+- **Collaborative Mode**: Multiple cameras/hands for ensemble performance
+- **AR Integration**: Overlay virtual keyboard or visual guides using WebXR
+
+#### Technical Considerations
+- **Latency Optimization**: Target <50ms end-to-end latency (camera → audio)
+- **Offline Mode**: Investigate TensorFlow.js for local model inference without CDN dependency
+- **Mobile Support**: Optimize for mobile cameras with lower resolution/framerate
+- **Accessibility**: Ensure gesture control doesn't replace but augments existing input methods
+- **Privacy**: Add clear indicators when camera is active, local processing only
+
+#### Research Directions
+- **EMG Integration**: Explore muscle sensor input for subtle gesture control
+- **Eye Tracking**: Use gaze for note selection, hands for triggering
+- **Depth Cameras**: Leverage Intel RealSense or similar for improved 3D tracking
+- **Haptic Feedback**: Investigate ultrasonic haptics for tactile response in air

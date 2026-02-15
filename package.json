@@ -5,7 +5,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && npm run download-models && vite build",
+    "download-models": "mkdir -p public/mediapipe/wasm public/mediapipe/models && cp node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe/wasm/ && curl -L -o public/mediapipe/models/hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
     "preview": "vite preview",
     "test": "vitest"
   },
@@ -27,5 +28,8 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.32"
   }
 }

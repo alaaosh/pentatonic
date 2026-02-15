@@ -74,14 +74,23 @@ The **Pentatonic Synth** is a virtual musical instrument designed for touch scre
 
 ### Requirement 6: Audio Configuration
 
-**User Story:** As a user, I want to customize the instrument's sound so that I can achieve different musical styles and preferences.
+**User Story:** As a user, I want to customize and save the instrument's sound so that I can achieve different musical styles and preferences.
 
 **Acceptance Criteria:**
 1. THE Audio_Engine SHALL provide adjustable synthesis parameters through the interface.
 2. WHEN synthesis parameters are changed, THE Audio_Engine SHALL apply changes to new notes immediately.
 3. THE Touch_Interface SHALL include controls for volume, tone, and basic effects.
-4. THE Audio_Engine SHALL support preset sound configurations for quick selection.
-5. THE Touch_Interface SHALL allow real-time parameter adjustment during performance.
+4. THE Audio_Engine SHALL support preset sound configurations (Factory and User-defined).
+5. THE application SHALL support saving and loading presets to/from local storage.
+
+### Requirement 10: Audio Effects Chain
+
+**User Story:** As a performer, I want space and texture in my sound so that the instrument feels professional and immersive.
+
+**Acceptance Criteria:**
+1. THE Audio_Engine SHALL implement a Stereo Delay effect with adjustable feedback and time.
+2. THE Audio_Engine SHALL implement a Reverb effect to simulate acoustic spaces.
+3. THE interface SHALL provide dedicated controls to toggle or adjust the intensity of these effects.
 
 ### Requirement 7: Performance Optimization
 

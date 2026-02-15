@@ -5,6 +5,7 @@ import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { DialWidget } from './ui/DialWidget';
 import { VerticalSlider } from './ui/VerticalSlider';
+import { GestureController } from './gesture/GestureController';
 import { globalEvents, EventType, NoteOnEvent, NoteOffEvent, NoteModulateEvent } from './utils/EventProcessor';
 import './styles.css';
 
@@ -26,6 +27,14 @@ const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
 
+// Gesture Control Elements
+const gestureToggleBtn = document.getElementById('gesture-toggle');
+const gesturePanel = document.getElementById('gesture-panel');
+const gestureCloseBtn = document.getElementById('gesture-close');
+const gestureVideo = document.getElementById('gesture-video') as HTMLVideoElement;
+const gestureCanvas = document.getElementById('gesture-canvas') as HTMLCanvasElement;
+const videoUpload = document.getElementById('video-upload') as HTMLInputElement;
+
 if (!canvas) {
     throw new Error('Canvas element not found');
 }
@@ -34,6 +43,11 @@ if (!canvas) {
 const renderer = new VisualRenderer(canvas);
 const audio = new SynthesisEngine();
 const touch = new TouchHandler(canvas, renderer);
+
+// Gesture Controller (initialized on demand)
+let gestureController: GestureController | null = null;
+// Track which voices are active for which fingers to enable polyphony
+const activeFingerVoices: Map<string, { index: number, octave: number }> = new Map();
 
 // --- Widget Initializations ---
 
@@ -200,5 +214,99 @@ updateLayout();
 document.addEventListener('touchmove', (e) => {
     if (e.target === canvas) e.preventDefault();
 }, { passive: false });
+
+// --- Gesture Control Logic ---
+
+if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
+    // Handle File Upload
+    if (videoUpload) {
+        videoUpload.addEventListener('change', (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file && gestureController) {
+                gestureController.loadVideo(file);
+            }
+        });
+    }
+
+    gestureToggleBtn.addEventListener('click', async () => {
+        // Mode 1: If Controller is active, Toggle logic
+        if (gestureController) {
+            // If panel is hidden, show it. If panel is visible, STOP controller (Toggle OFF).
+            // Wait, user said: "stopping... should be by clicking icon again".
+            // And: "camera to keep working even if we dismiss the camera overlay".
+            
+            // Logic:
+            // 1. If Controller Exists:
+            //    - Click -> Stop Controller completely.
+            // 2. If Controller doesn't exist:
+            //    - Click -> Start Controller & Show Panel.
+            
+            // STOP Logic
+            activeFingerVoices.forEach((noteData, voiceId) => {
+                audio.stopNote(voiceId);
+                renderer.setActive(noteData.index, noteData.octave, false);
+            });
+            activeFingerVoices.clear();
+            gestureController.stop();
+            gestureController = null;
+            
+            gesturePanel.classList.add('hidden');
+            gestureToggleBtn.classList.remove('active'); // Visual feedback
+            
+        } else {
+            // START Logic
+            gestureToggleBtn.classList.add('active'); // Visual feedback
+            gesturePanel.classList.remove('hidden');
+
+            try {
+                gestureCanvas.width = 640;
+                gestureCanvas.height = 480;
+                gestureController = new GestureController(gestureVideo, gestureCanvas);
+                await gestureController.initialize();
+                
+                gestureController.onGesture((event) => {
+                    const voiceId = event.fingerId; 
+
+                    if (event.type === 'start') {
+                        const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, event.octave);
+                        const rootNote = notes[event.noteIndex];
+                        if (rootNote) {
+                             const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, currentHarmony, currentChordType);
+                             const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (event.octave - 4)));
+                             
+                             audio.triggerNote(voiceId, frequencies, currentHarmony);
+                             activeFingerVoices.set(voiceId, { index: event.noteIndex, octave: event.octave });
+                             
+                             renderer.setActive(event.noteIndex, event.octave, true);
+                        }
+
+                    } else if (event.type === 'stop') {
+                        audio.stopNote(voiceId);
+                        const noteData = activeFingerVoices.get(voiceId);
+                        if (noteData) {
+                            renderer.setActive(noteData.index, noteData.octave, false);
+                            activeFingerVoices.delete(voiceId);
+                        }
+
+                    } else if (event.type === 'modulate') {
+                        if (event.pitchBend !== undefined) {
+                            audio.modulateNote(voiceId, event.pitchBend, 0); 
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to initialize gesture control:', error);
+                alert('Camera access required for gesture control. Please allow camera permissions.');
+                gestureToggleBtn.classList.remove('active');
+                return;
+            }
+        }
+    });
+    
+    gestureCloseBtn.addEventListener('click', () => {
+        // Just hide the panel, keep controller running
+        gesturePanel.classList.add('hidden');
+    });
+}
 
 console.log('Pentatonic Synth Initialized');
