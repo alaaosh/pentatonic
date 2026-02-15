@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pentatonic Harmony Instrument</title>
-  <script type="module" crossorigin src="./assets/index-Ds6jOqPf.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-C1O7YcV3.css">
+  <script type="module" crossorigin src="./assets/index-CvJl3lFo.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-5qXvf12L.css">
 </head>
 <body>
     <div id="audio-unlock" class="unlock-overlay">
@@ -20,6 +20,19 @@
         <header class="top-bar">
             <h1>Pentatonic Synth</h1>
             <div class="top-bar-controls">
+                <!-- Camera Toggle -->
+                <div class="control-group">
+                    <label>Cam</label>
+                    <button id="gesture-toggle" class="icon-btn-header" title="Toggle Camera Control">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="10" r="3" />
+                            <circle cx="12" cy="10" r="7" />
+                            <line x1="12" y1="17" x2="12" y2="22" />
+                            <line x1="8" y1="22" x2="16" y2="22" />
+                        </svg>
+                    </button>
+                </div>
+
                 <!-- Master Volume (Vertical in Top Bar) -->
                 <div class="control-group vol-group">
                     <label>Vol</label>
@@ -117,6 +130,30 @@
                 aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
             
             <div id="note-display" aria-live="polite">Touch to play</div>
+            
+            <!-- Gesture Control Panel -->
+            <div id="gesture-panel" class="gesture-panel hidden">
+                <div class="gesture-header">
+                    <h3>Camera Gesture Control</h3>
+                    <div class="gesture-actions">
+                        <label class="icon-btn" title="Upload Video">
+                            📁 <input type="file" id="video-upload" accept="video/*" hidden>
+                        </label>
+                        <button id="gesture-close" class="gesture-close-btn">×</button>
+                    </div>
+                </div>
+                <video id="gesture-video" class="gesture-video" autoplay playsinline controls></video>
+                <canvas id="gesture-canvas" class="gesture-canvas"></canvas>
+                <div class="gesture-info">
+                    <p><strong>Air Piano Mode</strong></p>
+                    <p>🖐 Left Hand = Bass | Right Hand = Melody</p>
+                    <p>👇 Bend any finger to play a note</p>
+                    <p>↕️ Move bent finger up/down to bend pitch</p>
+                    <p>✊ Make a fist to stop sound</p>
+                </div>
+            </div>
+            
+            <!-- Gesture Control Panel -->
         </main>
 
         <aside class="sidebar sidebar-right">
