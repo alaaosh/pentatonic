@@ -20,14 +20,17 @@ export interface GestureEvent {
   octave: number;
   velocity: number;
   pitchBend?: number; // -1 to 1 semitones
+  timbre?: number; // 0 to 1 (horizontal)
+  resonance?: number; // 0 to 1 (rotation)
 }
 
 interface FingerState {
   isActive: boolean;
   startY: number;
-  smoothingY: number[]; // For averaging
-  currentAngle: number; // For hysteresis
-  octaveAtStart: number; // Lock octave when note triggers
+  startX: number; // Added for horizontal modulation
+  smoothingY: number[]; 
+  currentAngle: number; 
+  octaveAtStart: number; 
 }
 
 export class GestureController {
@@ -269,11 +272,13 @@ export class GestureController {
       
       let state = this.fingerStates.get(fingerId);
       if (!state) {
-        state = { isActive: false, startY: 0, smoothingY: [], currentAngle: 0, octaveAtStart: 0 };
+        state = { isActive: false, startY: 0, startX: 0, smoothingY: [], currentAngle: 0, octaveAtStart: 0 };
         this.fingerStates.set(fingerId, state);
       }
 
+
       const tipY = landmarks[finger.tip].y;
+      const tipX = landmarks[finger.tip].x; // Track horizontal
       
       // Calculate current angle
       const rawAngle = this.calculateFingerAngle(landmarks, finger);
@@ -350,6 +355,7 @@ export class GestureController {
             // Trigger Note ON
             state.isActive = true;
             state.startY = tipY;
+            state.startX = tipX;
             state.smoothingY = [tipY];
             state.octaveAtStart = finalOctave; // Lock octave
             
@@ -363,16 +369,45 @@ export class GestureController {
 
           } else if (isBent && state.isActive) {
             // Modulation
+            
+            // 1. Pitch Bend (Vertical)
             const deltaY = state.startY - tipY; 
             const pitchBend = Math.max(-1, Math.min(1, deltaY * 2)); 
             
+            // 2. Timbre (Horizontal) - "Wah-Wah"
+            const deltaX = Math.abs(state.startX - tipX);
+            const timbre = Math.min(1, deltaX * 5); // Sensitivity: 20% screen width = full open
+
+            // 3. Resonance (Rotation) - "Scream"
+            // Calculate Roll angle: Difference in Z or Y between Index MCP(5) and Pinky MCP(17)
+            // Simpler: Check angle of the Palm line (Landmark 5 to 17)
+            const indexMCP = landmarks[5];
+            const pinkyMCP = landmarks[17];
+            
+            // Roll: Atan2 of deltaY/deltaX? No, that's in-plane rotation.
+            // We want roll "into" the screen or twist.
+            // Let's use the difference in Z depth between Index and Pinky knuckles.
+            // If hand is flat, Z difference is small. If rotated (thumb up), Index is higher/lower than Pinky.
+            // Actually, MediaPipe World Landmarks are better for this, but we only have screen landmarks.
+            // Approximation: Use the slope of the line connecting knuckles (5-9-13-17).
+            
+            // Let's try simple X-distance check? If hand rotates, width decreases? Unreliable.
+            // Let's try Y-difference between Knuckles. 
+            // Flat hand: Knuckles are roughly horizontal (same Y).
+            // Rotated hand: Index Knuckle is above/below Pinky Knuckle.
+            const knuckleDeltaY = Math.abs(indexMCP.y - pinkyMCP.y);
+            // Threshold: 0 (flat) to 0.15 (rotated 90 deg approx)
+            const resonance = Math.min(1, Math.max(0, (knuckleDeltaY - 0.02) * 8));
+
             this.emit({
               type: 'modulate',
               fingerId,
               noteIndex,
-              octave: state.octaveAtStart, // Use locked octave
+              octave: state.octaveAtStart, 
               velocity: 0.8,
-              pitchBend
+              pitchBend,
+              timbre,
+              resonance
             });
 
           } else if (!isBent && state.isActive) {
