@@ -26,6 +26,7 @@ interface FingerState {
   isActive: boolean;
   startY: number;
   smoothingY: number[]; // For averaging
+  currentAngle: number; // For hysteresis
 }
 
 export class GestureController {
@@ -232,22 +233,43 @@ export class GestureController {
     // Check for Fist (All 5 fingers bent? Or at least 4?)
     let bentCount = 0;
     fingers.forEach((finger, idx) => {
-         if (this.isFingerBent(landmarks, finger, idx === 0)) bentCount++;
+         const angle = this.calculateFingerAngle(landmarks, finger);
+         if (angle > (idx === 0 ? 45 : 85)) bentCount++;
     });
 
     const isFist = bentCount >= 4;
 
     fingers.forEach((finger, fingerIndex) => {
-      const isBent = this.isFingerBent(landmarks, finger, fingerIndex === 0);
+      // REMOVED: const isBent = this.isFingerBent(...) -> We calculate this below with hysteresis
+      
       const fingerId = `${handedness}-${fingerIndex}`;
       
       let state = this.fingerStates.get(fingerId);
       if (!state) {
-        state = { isActive: false, startY: 0, smoothingY: [] };
+        state = { isActive: false, startY: 0, smoothingY: [], currentAngle: 0 };
         this.fingerStates.set(fingerId, state);
       }
 
       const tipY = landmarks[finger.tip].y;
+      
+      // Calculate current angle
+      const rawAngle = this.calculateFingerAngle(landmarks, finger);
+      
+      // Simple smoothing (EMA)
+      if (state.currentAngle === undefined) state.currentAngle = rawAngle;
+      state.currentAngle = (rawAngle * 0.5) + (state.currentAngle * 0.5);
+
+      // Determine "isBent" using Hysteresis
+      const isThumb = fingerIndex === 0;
+      const triggerThreshold = isThumb ? 45 : 85; 
+      const releaseThreshold = isThumb ? 30 : 65;
+
+      let isBent = false;
+      if (state.isActive) {
+          isBent = state.currentAngle > releaseThreshold;
+      } else {
+          isBent = state.currentAngle > triggerThreshold;
+      }
 
       // Note Mapping
       let noteIndex = 0;
@@ -330,7 +352,7 @@ export class GestureController {
     });
   }
 
-  private isFingerBent(landmarks: HandLandmark[], finger: any, isThumb: boolean): boolean {
+  private calculateFingerAngle(landmarks: HandLandmark[], finger: any): number {
     const tip = landmarks[finger.tip];
     const joint = landmarks[finger.joint];
     const base = landmarks[finger.base];
@@ -340,19 +362,14 @@ export class GestureController {
     const v2 = { x: tip.x - joint.x, y: tip.y - joint.y, z: tip.z - joint.z };
 
     // Calculate angle using dot product
-    // cos(theta) = (v1 . v2) / (|v1| * |v2|)
     const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
     const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
     
-    const angleRad = Math.acos(dot / (mag1 * mag2));
-    const angleDeg = angleRad * (180 / Math.PI);
-
-    // Thresholds
-    // Adjust for thumb (it behaves differently)
-    const threshold = isThumb ? 30 : 50; 
-    
-    return Math.abs(angleDeg) > threshold;
+    // Angle in radians
+    const angleRad = Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2))));
+    // Convert to degrees
+    return angleRad * (180 / Math.PI);
   }
 
   private emit(event: GestureEvent) {
