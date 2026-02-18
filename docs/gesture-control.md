@@ -37,6 +37,21 @@ The system maps your 10 fingers to two octaves of the pentatonic scale, creating
 | **Ring** | 3 | 5th |
 | **Pinky** | 4 | 6th |
 
+## 3D Octave Control (6-Octave Range)
+
+You can shift octaves by changing the vertical orientation (tilt) of your hands. The system displays your current octave on the screen.
+
+| Hand | Pose | Octave | Role |
+| :--- | :--- | :--- | :--- |
+| **Right** | ☝️ Pointing Up | **6** | Very High |
+| **Right** | 🫳 Forward (Flat) | **5** | High (Default) |
+| **Right** | 👇 Pointing Down | **4** | Mid-High |
+| **Left** | ☝️ Pointing Up | **3** | Mid-Low |
+| **Left** | 🫳 Forward (Flat) | **2** | Low (Default) |
+| **Left** | 👇 Pointing Down | **1** | Sub Bass |
+
+*Note: The octave is locked when you trigger a note. You can move your hand freely for vibrato while holding a note without accidentally switching octaves.*
+
 ## Visual Feedback
 
 - **Skeleton Overlay**: Shows the real-time tracking of your hand joints.
