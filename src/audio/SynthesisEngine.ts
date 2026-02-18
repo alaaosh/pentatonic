@@ -102,7 +102,7 @@ export class SynthesisEngine {
     }
   }
 
-  modulateNote(noteId: string | number, pitchBend: number, timbre: number) {
+  modulateNote(noteId: string | number, pitchBend: number, timbre: number, resonanceMod: number = 0) {
     const voiceList = this.voices.get(noteId);
     if (!voiceList || !this.context) return;
 
@@ -111,10 +111,14 @@ export class SynthesisEngine {
     const pitchRatio = Math.pow(2, pitchBend / 12);
     // timbre is 0 to 1, use it to shift cutoff up to +2 octaves
     const filterFreq = this.filter.cutoff * (1 + timbre * 3);
+    
+    // resonanceMod is 0 to 1, adds to base resonance (max +10)
+    const filterRes = this.filter.resonance + (resonanceMod * 10);
 
     voiceList.forEach(voice => {
       voice.oscillator.frequency.setTargetAtTime(voice.baseFrequency * pitchRatio, now, 0.05);
       voice.filterNode.frequency.setTargetAtTime(filterFreq, now, 0.05);
+      voice.filterNode.Q.setTargetAtTime(filterRes, now, 0.05);
     });
   }
 

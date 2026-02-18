@@ -20,13 +20,17 @@ export interface GestureEvent {
   octave: number;
   velocity: number;
   pitchBend?: number; // -1 to 1 semitones
+  timbre?: number; // 0 to 1 (horizontal)
+  resonance?: number; // 0 to 1 (rotation)
 }
 
 interface FingerState {
   isActive: boolean;
   startY: number;
-  smoothingY: number[]; // For averaging
-  currentAngle: number; // For hysteresis
+  startX: number; // Added for horizontal modulation
+  smoothingY: number[]; 
+  currentAngle: number; 
+  octaveAtStart: number; 
 }
 
 export class GestureController {
@@ -156,21 +160,36 @@ export class GestureController {
     if (results.landmarks && results.landmarks.length > 0) {
       results.landmarks.forEach((landmarks: HandLandmark[], index: number) => {
         // Handle handedness
-        // MediaPipe New API returns 'handedness' array
-        // Each entry has categoryName: "Left" | "Right"
-        // Note: Camera is mirrored, so "Left" from model corresponds to user's Right hand visually if unmirrored?
-        // But we are drawing mirrored. 
-        // Let's rely on the label from the model. 
-        // In mirrored view: Model 'Left' = User Right Hand (visually on right side of screen).
-        // Let's stick to the label for ID generation.
-        
         const handednessEntry = results.handedness[index][0];
         const handednessLabel = handednessEntry.categoryName; 
+
+        // Draw Octave Indicator near the wrist
+        const wrist = landmarks[0];
+        const middleMCP = landmarks[9];
+        const vectorY = middleMCP.y - wrist.y;
+        
+        let base = (handednessLabel === 'Right') ? 5 : 2;
+        let shift = 0;
+        
+        if (vectorY < -0.15) shift = 1;
+        else if (vectorY > 0.15) shift = -1;
+        
+        const currentOctave = base + shift;
+        
+        // Draw Text
+        this.canvasCtx.fillStyle = '#4ECDC4';
+        this.canvasCtx.font = 'bold 16px Arial';
+        this.canvasCtx.fillText(
+            `Oct ${currentOctave}`, 
+            wrist.x * this.canvasElement.width, 
+            wrist.y * this.canvasElement.height + 30 
+        );
 
         this.processHand(landmarks, handednessLabel);
         this.drawHand(landmarks, handednessLabel);
       });
     } else {
+
         // Safety: ensure all notes stop if hands disappear
         this.stopAllFingers();
     }
@@ -189,14 +208,21 @@ export class GestureController {
               
               // Recalculate octave/index to send correct stop event
               // Note: This logic must match processHand mapping
+              // NOTE: For 6-octave, we need to know the octave it started at. 
+              // Since we stopAllFingers on hand loss, we might not have current orientation.
+              // We should rely on state.octaveAtStart if available.
+              
+              let octave = state.octaveAtStart;
               let noteIndex = 0;
-              let octave = 4;
+              
               if (handedness === 'Right') {
-                  octave = 5; 
                   noteIndex = fingerIndex;
               } else {
-                  octave = 3; 
                   noteIndex = 4 - fingerIndex; 
+              }
+              // If octaveAtStart wasn't set (legacy safety), fallback to base
+              if (!octave) {
+                  octave = (handedness === 'Right') ? 5 : 3;
               }
 
               this.emit({
@@ -246,11 +272,13 @@ export class GestureController {
       
       let state = this.fingerStates.get(fingerId);
       if (!state) {
-        state = { isActive: false, startY: 0, smoothingY: [], currentAngle: 0 };
+        state = { isActive: false, startY: 0, startX: 0, smoothingY: [], currentAngle: 0, octaveAtStart: 0 };
         this.fingerStates.set(fingerId, state);
       }
 
+
       const tipY = landmarks[finger.tip].y;
+      const tipX = landmarks[finger.tip].x; // Track horizontal
       
       // Calculate current angle
       const rawAngle = this.calculateFingerAngle(landmarks, finger);
@@ -271,70 +299,115 @@ export class GestureController {
           isBent = state.currentAngle > triggerThreshold;
       }
 
-      // Note Mapping
+      // Determine Octave based on Hand Orientation (3 Zones)
+      // Vector from Wrist(0) to MiddleMCP(9)
+      const wrist = landmarks[0];
+      const middleMCP = landmarks[9];
+      const handVectorY = middleMCP.y - wrist.y;
+      
+      // handVectorY:
+      // Negative (< -0.1) = Pointing UP (Screen: bottom to top is negative Y in most coords, wait)
+      // MediaPipe: Y=0 is Top, Y=1 is Bottom.
+      // So Wrist > MiddleMCP (Positive > Smaller) -> Y decreases -> Pointing UP.
+      // Wait, if Wrist Y is 0.8 and MCP Y is 0.5, Vector = 0.5 - 0.8 = -0.3. Correct.
+      
+      let orientationOctaveShift = 0;
+      // UP: < -0.15
+      // DOWN: > 0.15
+      // FORWARD: between
+      
+      if (handVectorY < -0.15) orientationOctaveShift = 1; // High
+      else if (handVectorY > 0.15) orientationOctaveShift = -1; // Low
+      else orientationOctaveShift = 0; // Mid
+
+      // Base Octave Mapping (Standard)
+      let baseOctave = 4;
       let noteIndex = 0;
-      let octave = 4; 
 
       if (handedness === 'Right') {
-        // Model "Right" = Visual Right (User's Right Hand in Mirror Mode)
-        // User wants Right Hand = High Octave
-        octave = 5; // Treble (High)
-        noteIndex = fingerIndex; // Thumb=0 (Piano style for right hand)
+        baseOctave = 5; // Treble
+        noteIndex = fingerIndex; 
       } else {
-        // Model "Left" = Visual Left (User's Left Hand in Mirror Mode)
-        // User wants Left Hand = Low Octave
-        octave = 3; // Bass (Low)
-        noteIndex = 4 - fingerIndex; // Pinky=0
+        baseOctave = 2; // Bass (Shifted down for 6-octave range: 1, 2, 3)
+        noteIndex = 4 - fingerIndex; 
       }
-
-      // Logic:
-      // If Fist -> Stop All (Force Note Off)
-      // Else -> Normal Logic
       
+      // Calculate Final Octave
+      let finalOctave = baseOctave + orientationOctaveShift;
+      
+      // Logic:
+      // If Fist -> Stop All
       if (isFist) {
           if (state.isActive) {
-             // Stop
              state.isActive = false;
+             // Use stored octave to stop correct note
              this.emit({
                 type: 'stop',
                 fingerId,
                 noteIndex,
-                octave,
+                octave: state.octaveAtStart,
                 velocity: 0
              });
           }
-          // Do nothing if already stopped
       } else {
           // Normal Play Logic
           if (isBent && !state.isActive) {
             // Trigger Note ON
             state.isActive = true;
             state.startY = tipY;
+            state.startX = tipX;
             state.smoothingY = [tipY];
+            state.octaveAtStart = finalOctave; // Lock octave
             
             this.emit({
               type: 'start',
               fingerId,
               noteIndex,
-              octave,
+              octave: finalOctave,
               velocity: 0.8 
             });
 
           } else if (isBent && state.isActive) {
             // Modulation
-            // Calculate vertical movement relative to start
-            // Moving UP (negative delta) -> Pitch Bend UP
-            // Moving DOWN (positive delta) -> Pitch Bend DOWN
-            const deltaY = state.startY - tipY; // Positive = Moved Up
-            const pitchBend = Math.max(-1, Math.min(1, deltaY * 2)); // Scale factor
             
+            // 1. Pitch Bend (Vertical)
+            const deltaY = state.startY - tipY; 
+            const pitchBend = Math.max(-1, Math.min(1, deltaY * 2)); 
+            
+            // 2. Timbre (Horizontal) - "Wah-Wah"
+            const deltaX = Math.abs(state.startX - tipX);
+            const timbre = Math.min(1, deltaX * 5); // Sensitivity: 20% screen width = full open
+
+            // 3. Resonance (Rotation) - "Scream"
+            // Calculate Roll angle: Difference in Z or Y between Index MCP(5) and Pinky MCP(17)
+            // Simpler: Check angle of the Palm line (Landmark 5 to 17)
+            const indexMCP = landmarks[5];
+            const pinkyMCP = landmarks[17];
+            
+            // Roll: Atan2 of deltaY/deltaX? No, that's in-plane rotation.
+            // We want roll "into" the screen or twist.
+            // Let's use the difference in Z depth between Index and Pinky knuckles.
+            // If hand is flat, Z difference is small. If rotated (thumb up), Index is higher/lower than Pinky.
+            // Actually, MediaPipe World Landmarks are better for this, but we only have screen landmarks.
+            // Approximation: Use the slope of the line connecting knuckles (5-9-13-17).
+            
+            // Let's try simple X-distance check? If hand rotates, width decreases? Unreliable.
+            // Let's try Y-difference between Knuckles. 
+            // Flat hand: Knuckles are roughly horizontal (same Y).
+            // Rotated hand: Index Knuckle is above/below Pinky Knuckle.
+            const knuckleDeltaY = Math.abs(indexMCP.y - pinkyMCP.y);
+            // Threshold: 0 (flat) to 0.15 (rotated 90 deg approx)
+            const resonance = Math.min(1, Math.max(0, (knuckleDeltaY - 0.02) * 8));
+
             this.emit({
               type: 'modulate',
               fingerId,
               noteIndex,
-              octave,
+              octave: state.octaveAtStart, 
               velocity: 0.8,
-              pitchBend
+              pitchBend,
+              timbre,
+              resonance
             });
 
           } else if (!isBent && state.isActive) {
@@ -344,7 +417,7 @@ export class GestureController {
               type: 'stop',
               fingerId,
               noteIndex,
-              octave,
+              octave: state.octaveAtStart, // Use locked octave
               velocity: 0
             });
           }

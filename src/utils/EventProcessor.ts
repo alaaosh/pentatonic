@@ -26,6 +26,7 @@ export interface NoteModulateEvent {
   octave: number;
   pitchBend: number; // -1 to 1 (semitones)
   timbre: number;   // 0 to 1 (filter offset)
+  resonance?: number; // 0 to 1 (filter resonance boost)
 }
 
 export interface ParamChangeEvent {

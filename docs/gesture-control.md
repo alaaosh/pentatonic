@@ -37,7 +37,36 @@ The system maps your 10 fingers to two octaves of the pentatonic scale, creating
 | **Ring** | 3 | 5th |
 | **Pinky** | 4 | 6th |
 
-## Visual Feedback
+## 3D Octave Control (6-Octave Range)
+
+You can shift octaves by changing the vertical orientation (tilt) of your hands. The system displays your current octave on the screen.
+
+| Hand | Pose | Octave | Role |
+| :--- | :--- | :--- | :--- |
+| **Right** | ☝️ Pointing Up | **6** | Very High |
+| **Right** | 🫳 Forward (Flat) | **5** | High (Default) |
+| **Right** | 👇 Pointing Down | **4** | Mid-High |
+| **Left** | ☝️ Pointing Up | **3** | Mid-Low |
+| **Left** | 🫳 Forward (Flat) | **2** | Low (Default) |
+| **Left** | 👇 Pointing Down | **1** | Sub Bass |
+
+*Note: The octave is locked when you trigger a note. You can move your hand freely for vibrato while holding a note without accidentally switching octaves.*
+
+## 3D Expression (Timbre & Resonance)
+
+In addition to pitch and octave control, your hand movements can modulate the sound's **timbre** (brightness/filter) and **resonance** (intensity/scream).
+
+| Movement | Parameter | Effect |
+| :--- | :--- | :--- |
+| **Hand moves Left ↔ Right** | Timbre | Filter cutoff - move left for darker, right for brighter |
+| **Hand rotates (roll)** | Resonance | Intensity - flat hands = clean, rotated = screaming |
+
+### How Roll Works
+The system calculates hand rotation by comparing the height of your index finger knuckles vs pinky knuckles:
+- **Flat hand** (knuckles aligned): Clean, no resonance
+- **Rotated inward** (pinky higher): Increases resonance (screaming tone)
+
+*Note: These modulations are relative to where your hand started when you pressed the note. They reset when you release and re-press the key.*
 
 - **Skeleton Overlay**: Shows the real-time tracking of your hand joints.
 - **Yellow Dots**: Inactive fingers.

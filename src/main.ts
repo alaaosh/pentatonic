@@ -289,8 +289,13 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
                         }
 
                     } else if (event.type === 'modulate') {
-                        if (event.pitchBend !== undefined) {
-                            audio.modulateNote(voiceId, event.pitchBend, 0); 
+                        if (event.pitchBend !== undefined && event.timbre !== undefined) {
+                            audio.modulateNote(
+                                voiceId, 
+                                event.pitchBend, 
+                                event.timbre,
+                                event.resonance || 0 // Pass resonance
+                            ); 
                         }
                     }
                 });
