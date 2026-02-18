@@ -52,7 +52,21 @@ You can shift octaves by changing the vertical orientation (tilt) of your hands.
 
 *Note: The octave is locked when you trigger a note. You can move your hand freely for vibrato while holding a note without accidentally switching octaves.*
 
-## Visual Feedback
+## 3D Expression (Timbre & Resonance)
+
+In addition to pitch and octave control, your hand movements can modulate the sound's **timbre** (brightness/filter) and **resonance** (intensity/scream).
+
+| Movement | Parameter | Effect |
+| :--- | :--- | :--- |
+| **Hand moves Left ↔ Right** | Timbre | Filter cutoff - move left for darker, right for brighter |
+| **Hand rotates (roll)** | Resonance | Intensity - flat hands = clean, rotated = screaming |
+
+### How Roll Works
+The system calculates hand rotation by comparing the height of your index finger knuckles vs pinky knuckles:
+- **Flat hand** (knuckles aligned): Clean, no resonance
+- **Rotated inward** (pinky higher): Increases resonance (screaming tone)
+
+*Note: These modulations are relative to where your hand started when you pressed the note. They reset when you release and re-press the key.*
 
 - **Skeleton Overlay**: Shows the real-time tracking of your hand joints.
 - **Yellow Dots**: Inactive fingers.
