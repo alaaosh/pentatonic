@@ -17,7 +17,11 @@
 
     <div class="app-layout">
         <header class="top-bar">
-            <h1>Pentatonic Synth</h1>
+            <div class="keypad-title-group">
+                <h1 id="keypad-name">Pentatonic Synth</h1>
+                <button id="rename-btn" class="rename-btn" title="Rename keypad" aria-label="Rename keypad">✏️</button>
+                <input id="rename-input" class="rename-input hidden" type="text" maxlength="40" aria-label="Keypad name">
+            </div>
             <div class="top-bar-controls">
                 <!-- Camera Toggle -->
                 <div class="control-group">

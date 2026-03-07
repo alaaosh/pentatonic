@@ -5,6 +5,7 @@ import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
 import { DialWidget } from './ui/DialWidget';
 import { VerticalSlider } from './ui/VerticalSlider';
+import { KeypadManager } from './ui/KeypadManager';
 import { GestureController } from './gesture/GestureController';
 import { globalEvents, EventType, NoteOnEvent, NoteOffEvent, NoteModulateEvent } from './utils/EventProcessor';
 import './styles.css';
@@ -27,6 +28,11 @@ const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
 
+// Keypad Name Elements
+const keypadNameEl = document.getElementById('keypad-name');
+const renameBtn = document.getElementById('rename-btn');
+const renameInput = document.getElementById('rename-input') as HTMLInputElement;
+
 // Gesture Control Elements
 const gestureToggleBtn = document.getElementById('gesture-toggle');
 const gesturePanel = document.getElementById('gesture-panel');
@@ -37,6 +43,41 @@ const videoUpload = document.getElementById('video-upload') as HTMLInputElement;
 
 if (!canvas) {
     throw new Error('Canvas element not found');
+}
+
+// Keypad Name Management
+const keypadManager = new KeypadManager();
+if (keypadNameEl) keypadNameEl.textContent = keypadManager.name;
+
+const startRename = () => {
+    if (!keypadNameEl || !renameInput) return;
+    renameInput.value = keypadManager.name;
+    keypadNameEl.classList.add('hidden');
+    renameInput.classList.remove('hidden');
+    renameInput.focus();
+    renameInput.select();
+};
+
+const commitRename = () => {
+    if (!keypadNameEl || !renameInput) return;
+    keypadManager.rename(renameInput.value);
+    keypadNameEl.textContent = keypadManager.name;
+    renameInput.classList.add('hidden');
+    keypadNameEl.classList.remove('hidden');
+};
+
+if (renameBtn) renameBtn.addEventListener('click', startRename);
+if (keypadNameEl) keypadNameEl.addEventListener('dblclick', startRename);
+
+if (renameInput) {
+    renameInput.addEventListener('blur', commitRename);
+    renameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') renameInput.blur();
+        if (e.key === 'Escape') {
+            renameInput.value = keypadManager.name;
+            renameInput.blur();
+        }
+    });
 }
 
 // Initialize Components
