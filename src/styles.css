@@ -1,3 +1,8 @@
+:root {
+    --bg-start: #1e3c72;
+    --bg-end: #2a5298;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +11,7 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
     color: white;
     height: 100vh;
     overflow: hidden;
@@ -56,11 +61,15 @@ body {
 .top-bar-controls {
     display: flex;
     flex-direction: row;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: stretch;
     gap: 20px;
     width: 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+}
+
+.top-bar-controls .tone-shaping-group {
+    margin-left: auto;
 }
 
 /* Header Icon Button */
@@ -96,6 +105,36 @@ body {
     box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
 }
 
+#record-btn.active {
+    background: hotpink;
+    border-color: hotpink;
+    color: white;
+    box-shadow: 0 0 12px rgba(255, 105, 180, 0.6);
+}
+
+.instrument-toolbar {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    margin-bottom: 0;
+    position: relative;
+    top: -1.5cm;
+    left: 0;
+    z-index: 1;
+}
+
+.instrument-toolbar .icon-btn-header {
+    width: 44px;
+    height: 44px;
+}
+
+.toolbar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .vol-group {
     justify-content: space-between;
 }
@@ -106,9 +145,10 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 12px;
+    transform: translateY(-1cm);
 }
 
-.sidebar-left { grid-area: side-left; }
+.sidebar-left { grid-area: side-left; padding-top: 20px; padding-bottom: 20px; position: relative; top: -2cm; }
 .sidebar-right { grid-area: side-right; }
 
 .main-content { 
@@ -117,8 +157,12 @@ body {
     flex-direction: column;
     gap: 10px;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     min-width: 0;
+    position: relative;
+    left: 0;
+    margin-top: -1cm;
+    padding-bottom: 10px;
 }
 
 .sidebar {
@@ -154,6 +198,58 @@ body {
     gap: 8px;
 }
 
+.background-picker-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.background-picker-row input[type="color"] {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+}
+
+.pad-customization-grid {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+}
+
+.pad-customization-row {
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    gap: 8px;
+    align-items: center;
+}
+
+.pad-customization-row input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.pad-customization-row input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.pad-customization-row input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+}
+
 .control-group label {
     font-size: 0.65em;
     text-transform: uppercase;
@@ -186,8 +282,8 @@ body {
 }
 
 .dial {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     background: #222;
     border: 2px solid rgba(255,255,255,0.2);
     border-radius: 50%;
@@ -198,19 +294,19 @@ body {
 
 .dial-indicator {
     position: absolute;
-    top: 4px;
+    top: 6px;
     left: 50%;
     width: 2px;
-    height: 10px;
+    height: 14px;
     background: #4ECDC4;
-    transform-origin: 50% 12px;
+    transform-origin: 50% 14px;
     border-radius: 1px;
 }
 
 .dial-value {
-    font-size: 0.6em;
+    font-size: 0.75em;
     font-family: monospace;
-    opacity: 0.6;
+    opacity: 0.7;
 }
 
 /* Vertical Slider (Master Volume in Top Bar) */
@@ -259,7 +355,15 @@ body {
     align-items: stretch;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
+    gap: 14px;
+}
+
+.synth-dials-row .control-group {
+    min-width: 76px;
+}
+
+.synth-dials-row .control-group label {
+    font-size: 0.75em;
 }
 
 /* Multi Range Slider */
@@ -298,18 +402,18 @@ body {
 /* Root Grid Widget */
 .root-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, minmax(36px, 1fr));
+    gap: 6px;
 }
 
 .root-btn {
-    padding: 12px 15px; /* Increased padding */
+    padding: 8px 8px;
     border: 1px solid rgba(255,255,255,0.1);
     background: rgba(0,0,0,0.2);
     color: white;
     cursor: pointer;
-    font-size: 0.85em;
-    font-weight: bold; /* Thicker text */
+    font-size: 0.72em;
+    font-weight: bold;
     border-radius: 4px;
     transition: all 0.2s;
 }
@@ -357,15 +461,24 @@ body {
 
 #instrument {
     display: block;
-    width: 100%;
-    max-width: 600px;
+    width: calc(100% + 1cm);
+    max-width: calc(600px + 1cm);
     aspect-ratio: 1.2 / 1;
+    max-height: calc(100vh - 220px);
     border: 3px solid rgba(255,255,255,0.3);
     border-radius: 15px;
     background: rgba(0,0,0,0.2);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     touch-action: none;
     flex: 0 1 auto;
+    margin: 0 -0.5cm 8px -0.5cm;
+}
+
+.instrument-toolbar {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 18px;
 }
 
 /* Unlock Overlay */
@@ -438,7 +551,9 @@ body {
     .control-group { gap: 4px; }
     
     #instrument { 
+        width: 100%;
         max-width: 100%;
+        margin: 0 0 8px;
         max-height: 40vh;
     }
     .root-grid { grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; }
@@ -553,6 +668,60 @@ body {
 .gesture-info p {
     margin: 5px 0;
     opacity: 0.9;
+}
+
+/* Keypad Rename */
+.keypad-title-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 5px;
+    transform: translateY(-0.5cm);
+}
+
+.rename-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85em;
+    opacity: 0.5;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: opacity 0.2s, background 0.2s;
+    line-height: 1;
+}
+
+.rename-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.rename-input {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    color: white;
+    padding: 2px 8px;
+    width: 200px;
+    outline: none;
+}
+
+.rename-input:focus {
+    border-color: #4ECDC4;
+    box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.3);
+}
+
+.rename-input.hidden {
+    display: none;
+}
+
+#keypad-name.hidden {
+    display: none;
 }
 
 .gesture-toggle-btn {

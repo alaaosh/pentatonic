@@ -8,6 +8,7 @@ export interface NoteArea {
   width: number;
   height: number;
   color: string;
+  label: string;
   note: PentatonicNote;
 }
 
@@ -15,6 +16,11 @@ export interface OctaveSettings {
   top: number;
   mid: number;
   bottom: number;
+}
+
+export interface PadCustomization {
+  label: string;
+  color: string;
 }
 
 export class VisualRenderer {
@@ -70,13 +76,16 @@ export class VisualRenderer {
     this.render();
   }
 
-  updateLayout(notes: PentatonicNote[], octaves: OctaveSettings) {
+  updateLayout(notes: PentatonicNote[], octaves: OctaveSettings, customizations: PadCustomization[]) {
     this.currentNotes = notes;
     this.currentOctaves = octaves;
+    this.currentPadCustomizations = customizations;
     this.setupHighDPI();
     this.calculateNoteAreas();
     this.render();
   }
+
+  private currentPadCustomizations: PadCustomization[] = [];
 
   private calculateNoteAreas() {
     if (!this.currentOctaves) return;
@@ -99,6 +108,7 @@ export class VisualRenderer {
     this.noteAreas = [];
     
     this.currentNotes.forEach((note, noteIndex) => {
+        const customization = this.currentPadCustomizations[noteIndex];
         let currentY = 0;
         rows.forEach((row) => {
             const areaHeight = height * row.pct;
@@ -109,7 +119,8 @@ export class VisualRenderer {
                 y: currentY,
                 width: noteWidth,
                 height: areaHeight,
-                color: this.COLORS[noteIndex % this.COLORS.length],
+                color: customization?.color ?? this.COLORS[noteIndex % this.COLORS.length],
+                label: customization?.label ?? `${note.name}${row.val}`,
                 note: note
             });
             currentY += areaHeight;
@@ -165,12 +176,24 @@ export class VisualRenderer {
       const centerX = area.x + area.width / 2;
       const centerY = area.y + area.height / 2;
 
+      const displayText = area.label || `${area.note.name}${area.octave}`;
+      const showSubtitle = area.label && area.label !== `${area.note.name}${area.octave}`;
       this.ctx.font = area.height < 60 ? 'bold 12px Arial' : 'bold 20px Arial';
-      
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      this.ctx.fillText(`${area.note.name}${area.octave}`, centerX + 1, centerY + 1);
-      this.ctx.fillStyle = 'white';
-      this.ctx.fillText(`${area.note.name}${area.octave}`, centerX, centerY);
+
+      if (showSubtitle) {
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        this.ctx.fillText(displayText, centerX, centerY - 10);
+        this.ctx.font = '12px Arial';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        this.ctx.fillText(`${area.note.name}${area.octave}`, centerX, centerY + 10);
+      } else {
+        this.ctx.font = area.height < 60 ? 'bold 12px Arial' : 'bold 20px Arial';
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.fillText(displayText, centerX + 1, centerY + 1);
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillText(displayText, centerX, centerY);
+      }
     });
   }
 
