@@ -26,6 +26,7 @@ export interface Voice {
 export class SynthesisEngine {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private recorderDestination: MediaStreamAudioDestinationNode | null = null;
   private voices: Map<string | number, Voice[]> = new Map();
   private arpeggioIntervals: Map<string | number, number> = new Map();
   private totalVoices: number = 0;
@@ -51,6 +52,8 @@ export class SynthesisEngine {
       this.masterGain = this.context.createGain();
       this.masterGain.connect(this.context.destination);
       this.masterGain.gain.value = 0.5;
+      this.recorderDestination = this.context.createMediaStreamDestination();
+      this.masterGain.connect(this.recorderDestination);
     }
     return this.context;
   }
@@ -225,5 +228,9 @@ export class SynthesisEngine {
 
   stopAll() {
     Array.from(this.voices.keys()).forEach(id => this.stopNote(id));
+  }
+
+  getRecordingStream(): MediaStream {
+    return this.recorderDestination?.stream ?? new MediaStream();
   }
 }

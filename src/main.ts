@@ -25,6 +25,9 @@ const harmonyMode = document.getElementById('harmony-mode');
 const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
 const waveformSelect = document.getElementById('waveform-select');
 const noteDisplay = document.getElementById('note-display');
+const bgColorStart = document.getElementById('bg-color-start') as HTMLInputElement;
+const bgColorEnd = document.getElementById('bg-color-end') as HTMLInputElement;
+const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
 
@@ -32,6 +35,7 @@ const startBtn = document.getElementById('start-btn');
 const keypadNameEl = document.getElementById('keypad-name');
 const renameBtn = document.getElementById('rename-btn');
 const renameInput = document.getElementById('rename-input') as HTMLInputElement;
+const padCustomizationContainer = document.getElementById('pad-customization');
 
 // Gesture Control Elements
 const gestureToggleBtn = document.getElementById('gesture-toggle');
@@ -79,6 +83,190 @@ if (renameInput) {
         }
     });
 }
+
+const PAD_STORAGE_KEY = 'pentatonic-pad-customizations';
+
+type PadCustomization = {
+    label: string;
+    color: string;
+};
+
+const DEFAULT_PAD_CUSTOMIZATION: PadCustomization[] = [
+    { label: '', color: '#FF6B6B' },
+    { label: '', color: '#4ECDC4' },
+    { label: '', color: '#45B7D1' },
+    { label: '', color: '#96CEB4' },
+    { label: '', color: '#FFEAA7' }
+];
+
+let padCustomizations: PadCustomization[] = DEFAULT_PAD_CUSTOMIZATION;
+
+const loadPadCustomizations = () => {
+    try {
+        const raw = window.localStorage.getItem(PAD_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw) as PadCustomization[];
+            if (Array.isArray(parsed) && parsed.length === DEFAULT_PAD_CUSTOMIZATION.length) {
+                padCustomizations = parsed.map((item, index) => ({
+                    label: typeof item?.label === 'string' && item.label.trim().length > 0 ? item.label : DEFAULT_PAD_CUSTOMIZATION[index].label,
+                    color: typeof item?.color === 'string' && item.color ? item.color : DEFAULT_PAD_CUSTOMIZATION[index].color
+                }));
+                return;
+            }
+        }
+    } catch {
+        // ignore invalid data
+    }
+    padCustomizations = [...DEFAULT_PAD_CUSTOMIZATION];
+};
+
+let mediaRecorder: MediaRecorder | null = null;
+let recordedChunks: BlobPart[] = [];
+
+const createRecorder = async () => {
+    if (!recordBtn) return null;
+    await audio.resume();
+    const stream = audio.getRecordingStream();
+    if (stream.getAudioTracks().length === 0) return null;
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+    try {
+        const recorder = new MediaRecorder(stream, { mimeType });
+        recorder.addEventListener('dataavailable', (event) => {
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        });
+        recorder.addEventListener('stop', () => {
+            if (recordedChunks.length === 0) return;
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pentatonic-recording.webm';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            recordedChunks = [];
+            if (recordBtn) {
+                recordBtn.classList.remove('active');
+                recordBtn.textContent = '●';
+            }
+            if (noteDisplay) {
+                noteDisplay.textContent = 'Recording saved';
+            }
+        });
+        return recorder;
+    } catch (error) {
+        console.warn('Recording is not supported in this browser', error);
+        return null;
+    }
+};
+
+const toggleRecording = async () => {
+    if (!recordBtn) return;
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        return;
+    }
+    const recorder = await createRecorder();
+    if (!recorder) {
+        if (noteDisplay) noteDisplay.textContent = 'Recording unavailable';
+        return;
+    }
+    mediaRecorder = recorder;
+    recordedChunks = [];
+    mediaRecorder.start();
+    recordBtn.classList.add('active');
+    recordBtn.textContent = '■';
+    if (noteDisplay) noteDisplay.textContent = 'Recording...';
+};
+
+const savePadCustomizations = () => {
+    try {
+        window.localStorage.setItem(PAD_STORAGE_KEY, JSON.stringify(padCustomizations));
+    } catch (error) {
+        console.warn('Unable to persist pad customizations', error);
+    }
+};
+
+const renderPadCustomizationControls = () => {
+    if (!padCustomizationContainer) return;
+    padCustomizationContainer.innerHTML = '';
+
+    padCustomizations.forEach((settings, index) => {
+        const row = document.createElement('div');
+        row.className = 'pad-customization-row';
+
+        const label = document.createElement('input');
+        label.type = 'text';
+        label.value = settings.label;
+        label.placeholder = `Pad ${index + 1}`;
+        label.setAttribute('aria-label', `Pad ${index + 1} name`);
+        label.addEventListener('input', () => {
+            padCustomizations[index].label = label.value;
+            savePadCustomizations();
+            updateLayout();
+        });
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = settings.color;
+        colorInput.setAttribute('aria-label', `Pad ${index + 1} color`);
+        colorInput.addEventListener('input', () => {
+            padCustomizations[index].color = colorInput.value;
+            savePadCustomizations();
+            updateLayout();
+        });
+
+        row.appendChild(label);
+        row.appendChild(colorInput);
+        padCustomizationContainer.appendChild(row);
+    });
+};
+
+const setBackgroundColors = (start: string, end: string) => {
+    document.documentElement.style.setProperty('--bg-start', start);
+    document.documentElement.style.setProperty('--bg-end', end);
+    try {
+        window.localStorage.setItem('pentatonicBgStart', start);
+        window.localStorage.setItem('pentatonicBgEnd', end);
+    } catch (error) {
+        console.warn('Unable to persist background color settings', error);
+    }
+};
+
+const initializeBackground = () => {
+    const defaultStart = '#1e3c72';
+    const defaultEnd = '#2a5298';
+    const savedStart = window.localStorage.getItem('pentatonicBgStart');
+    const savedEnd = window.localStorage.getItem('pentatonicBgEnd');
+    const start = savedStart || defaultStart;
+    const end = savedEnd || defaultEnd;
+    setBackgroundColors(start, end);
+    if (bgColorStart) bgColorStart.value = start;
+    if (bgColorEnd) bgColorEnd.value = end;
+};
+
+if (bgColorStart) {
+    bgColorStart.addEventListener('input', () => {
+        setBackgroundColors(bgColorStart.value, bgColorEnd?.value ?? '#2a5298');
+    });
+}
+
+if (bgColorEnd) {
+    bgColorEnd.addEventListener('input', () => {
+        setBackgroundColors(bgColorStart?.value ?? '#1e3c72', bgColorEnd.value);
+    });
+}
+
+loadPadCustomizations();
+renderPadCustomizationControls();
+initializeBackground();
 
 // Initialize Components
 const renderer = new VisualRenderer(canvas);
@@ -201,7 +389,7 @@ touch.onNoteStop = (noteIndex, octave) => {
 // Helper to update the scale layout
 const updateLayout = () => {
     const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, 4);
-    renderer.updateLayout(notes, currentOctaves);
+    renderer.updateLayout(notes, currentOctaves, padCustomizations);
 };
 
 // UI Controls Listeners
