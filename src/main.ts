@@ -1,28 +1,26 @@
-import { ScaleManager, RootNote, ScaleType, HarmonyType, ChordType } from './audio/ScaleManager';
-import { SynthesisEngine, Waveform } from './audio/SynthesisEngine';
+import { ScaleManager, RootNote, ScaleType } from './audio/ScaleManager';
+import { SynthesisEngine } from './audio/SynthesisEngine';
 import { VisualRenderer } from './ui/VisualRenderer';
 import { TouchHandler } from './ui/TouchHandler';
 import { MultiRangeSlider } from './ui/MultiRangeSlider';
-import { DialWidget } from './ui/DialWidget';
 import { VerticalSlider } from './ui/VerticalSlider';
+import { ComplexityDial } from './ui/ComplexityDial';
 import { GestureController } from './gesture/GestureController';
-import { globalEvents, EventType, NoteOnEvent, NoteOffEvent, NoteModulateEvent } from './utils/EventProcessor';
+import { ComplexityManager } from './engine/ComplexityManager';
+import { MiddlewarePipeline } from './engine/MiddlewarePipeline';
 import './styles.css';
 
-// App State
+// ─── Core State ───────────────────────────────────────────────────────────────
+
 let currentRoot: RootNote = 'C';
 let currentScaleType: ScaleType = 'major';
 let currentOctaves = { top: 5, mid: 4, bottom: 3 };
-let currentHarmony: HarmonyType = 'chord';
-let currentChordType: ChordType = 'maj7';
 
-// DOM Elements
+// ─── DOM Elements ─────────────────────────────────────────────────────────────
+
 const canvas = document.getElementById('instrument') as HTMLCanvasElement;
 const rootStrip = document.getElementById('root-strip');
 const scaleSelect = document.getElementById('scale-select') as HTMLSelectElement;
-const harmonyMode = document.getElementById('harmony-mode');
-const chordTypeSelect = document.getElementById('chord-type') as HTMLSelectElement;
-const waveformSelect = document.getElementById('waveform-select');
 const noteDisplay = document.getElementById('note-display');
 const unlockOverlay = document.getElementById('audio-unlock');
 const startBtn = document.getElementById('start-btn');
@@ -39,63 +37,40 @@ if (!canvas) {
     throw new Error('Canvas element not found');
 }
 
-// Initialize Components
-const renderer = new VisualRenderer(canvas);
+// ─── Initialize v2.0 Architecture ────────────────────────────────────────────
+
+const complexity = new ComplexityManager();
 const audio = new SynthesisEngine();
+const renderer = new VisualRenderer(canvas);
+const pipeline = new MiddlewarePipeline(complexity, audio, renderer);
 const touch = new TouchHandler(canvas, renderer);
 
 // Gesture Controller (initialized on demand)
 let gestureController: GestureController | null = null;
-// Track which voices are active for which fingers to enable polyphony
 const activeFingerVoices: Map<string, { index: number, octave: number }> = new Map();
 
-// --- Widget Initializations ---
+// ─── Widget Initializations ──────────────────────────────────────────────────
 
+// The Complexity Dial — replaces waveform, filter, ADSR, harmony, and chord controls
+new ComplexityDial('complexity-dial-container', complexity);
+
+// Volume remains as a separate control (it's about loudness, not musical complexity)
 new VerticalSlider('volume-slider', 0.5, (v) => {
     audio.setVolume(v);
 });
 
+// Octave range remains (it's about register, not complexity)
 new MultiRangeSlider('octave-slider', currentOctaves, (newValues) => {
     currentOctaves = { ...newValues };
     updateLayout();
 });
 
-new DialWidget('dial-filter', {
-    min: 100, max: 10000, step: 10, initialValue: 2000, label: 'Cutoff',
-    onChange: (v) => audio.setFilter({ cutoff: v })
-});
-
-new DialWidget('dial-resonance', {
-    min: 0, max: 20, step: 0.1, initialValue: 1, label: 'Res',
-    onChange: (v) => audio.setFilter({ resonance: v })
-});
-
-new DialWidget('dial-attack', {
-    min: 0.01, max: 2, step: 0.01, initialValue: 0.05, label: 'Atk',
-    onChange: (v) => audio.setEnvelope({ attack: v })
-});
-
-new DialWidget('dial-decay', {
-    min: 0.01, max: 2, step: 0.01, initialValue: 0.2, label: 'Dec',
-    onChange: (v) => audio.setEnvelope({ decay: v })
-});
-
-new DialWidget('dial-sustain', {
-    min: 0, max: 1, step: 0.01, initialValue: 0.3, label: 'Sus',
-    onChange: (v) => audio.setEnvelope({ sustain: v })
-});
-
-new DialWidget('dial-release', {
-    min: 0.1, max: 5, step: 0.1, initialValue: 1.0, label: 'Rel',
-    onChange: (v) => audio.setEnvelope({ release: v })
-});
-
-// --- Audio Unlock Logic ---
+// ─── Audio Unlock ─────────────────────────────────────────────────────────────
 
 const startApp = async () => {
     await audio.resume();
     unlockOverlay?.classList.add('hidden');
-    console.log('Pentatonic Synth Started');
+    console.log('PentaSynth v2.0 Started');
     updateLayout();
 };
 
@@ -103,67 +78,52 @@ if (startBtn) {
     startBtn.addEventListener('click', startApp);
 }
 
-// --- Subscriptions ---
-
-globalEvents.subscribe<NoteOnEvent>(EventType.NOTE_ON, (data) => {
-    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, data.octave);
-    const rootNote = notes[data.index];
-    if (rootNote) {
-        const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, data.harmonyType, data.chordType);
-        const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (data.octave - 4)));
-        const voiceId = `${data.index}-${data.octave}`;
-        audio.triggerNote(voiceId, frequencies, data.harmonyType);
-        if (noteDisplay) noteDisplay.textContent = `Playing: ${rootNote.name}${data.octave}`;
-    }
-    renderer.setActive(data.index, data.octave, true);
-});
-
-globalEvents.subscribe<NoteOffEvent>(EventType.NOTE_OFF, (data) => {
-    const voiceId = `${data.index}-${data.octave}`;
-    audio.stopNote(voiceId);
-    renderer.setActive(data.index, data.octave, false);
-});
-
-globalEvents.subscribe<NoteModulateEvent>(EventType.NOTE_MODULATE, (data) => {
-    const voiceId = `${data.index}-${data.octave}`;
-    audio.modulateNote(voiceId, data.pitchBend, data.timbre);
-});
-
-// --- Input Handling -> Event Emission ---
+// ─── Input → Pipeline ─────────────────────────────────────────────────────────
 
 touch.onNoteStart = (noteIndex, octave) => {
-    const freq = ScaleManager.getFrequency(currentRoot, currentScaleType, noteIndex, octave);
-    globalEvents.emit<NoteOnEvent>(EventType.NOTE_ON, {
-        index: noteIndex, frequency: freq, velocity: 1.0, 
-        harmonyType: currentHarmony, chordType: currentChordType, octave: octave
+    pipeline.process({
+        type: 'note_on',
+        index: noteIndex,
+        octave,
+        velocity: 1.0,
     });
+    // Update display
+    const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, octave);
+    const rootNote = notes[noteIndex];
+    if (noteDisplay && rootNote) {
+        noteDisplay.textContent = `${rootNote.name}${octave}`;
+    }
 };
 
 touch.onNoteModulate = (noteIndex, octave, relX, relY) => {
-    // relY: 0 (top) to 1 (bottom). Let's map center (0.5) to no bend.
-    // 0.5 to 0 -> 0 to +1 semitone
-    // 0.5 to 1 -> 0 to -1 semitone
-    const pitchBend = (0.5 - relY) * 2; // Range -1 to 1 semitones
-    
-    // relX: 0 (left) to 1 (right). 
-    const timbre = relX; // Range 0 to 1
+    const pitchBend = (0.5 - relY) * 2; // -1 to 1 semitones
+    const timbre = relX; // 0 to 1
 
-    globalEvents.emit<NoteModulateEvent>(EventType.NOTE_MODULATE, {
-        index: noteIndex, octave: octave, pitchBend, timbre
+    pipeline.process({
+        type: 'note_modulate',
+        index: noteIndex,
+        octave,
+        pitchBend,
+        timbre,
     });
 };
 
 touch.onNoteStop = (noteIndex, octave) => {
-    globalEvents.emit<NoteOffEvent>(EventType.NOTE_OFF, { index: noteIndex, octave: octave });
+    pipeline.process({
+        type: 'note_off',
+        index: noteIndex,
+        octave,
+    });
+    if (noteDisplay) noteDisplay.textContent = '';
 };
 
-// Helper to update the scale layout
+// ─── Scale Controls ───────────────────────────────────────────────────────────
+
 const updateLayout = () => {
     const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, 4);
     renderer.updateLayout(notes, currentOctaves);
+    pipeline.setScale(currentRoot, currentScaleType);
 };
-
-// UI Controls Listeners
 
 if (rootStrip) {
     rootStrip.addEventListener('click', (e) => {
@@ -183,42 +143,17 @@ if (scaleSelect) {
     });
 }
 
-if (harmonyMode) {
-    harmonyMode.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest('.segment-btn');
-        if (!btn) return;
-        currentHarmony = btn.getAttribute('data-value') as HarmonyType;
-        harmonyMode.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    });
-}
-
-if (chordTypeSelect) {
-    chordTypeSelect.addEventListener('change', (e) => {
-        currentChordType = (e.target as HTMLSelectElement).value as ChordType;
-    });
-}
-
-if (waveformSelect) {
-    waveformSelect.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest('.segment-btn');
-        if (!btn) return;
-        audio.setWaveform(btn.getAttribute('data-value') as Waveform);
-        waveformSelect.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    });
-}
-
 updateLayout();
+
+// ─── Touch Prevention ─────────────────────────────────────────────────────────
 
 document.addEventListener('touchmove', (e) => {
     if (e.target === canvas) e.preventDefault();
 }, { passive: false });
 
-// --- Gesture Control Logic ---
+// ─── Gesture Control ──────────────────────────────────────────────────────────
 
 if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
-    // Handle File Upload
     if (videoUpload) {
         videoUpload.addEventListener('change', (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
@@ -229,33 +164,19 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
     }
 
     gestureToggleBtn.addEventListener('click', async () => {
-        // Mode 1: If Controller is active, Toggle logic
         if (gestureController) {
-            // If panel is hidden, show it. If panel is visible, STOP controller (Toggle OFF).
-            // Wait, user said: "stopping... should be by clicking icon again".
-            // And: "camera to keep working even if we dismiss the camera overlay".
-            
-            // Logic:
-            // 1. If Controller Exists:
-            //    - Click -> Stop Controller completely.
-            // 2. If Controller doesn't exist:
-            //    - Click -> Start Controller & Show Panel.
-            
-            // STOP Logic
-            activeFingerVoices.forEach((noteData, voiceId) => {
-                audio.stopNote(voiceId);
-                renderer.setActive(noteData.index, noteData.octave, false);
+            // STOP — release all active voices
+            activeFingerVoices.forEach((noteData, _voiceId) => {
+                pipeline.process({ type: 'note_off', index: noteData.index, octave: noteData.octave });
             });
             activeFingerVoices.clear();
             gestureController.stop();
             gestureController = null;
-            
             gesturePanel.classList.add('hidden');
-            gestureToggleBtn.classList.remove('active'); // Visual feedback
-            
+            gestureToggleBtn.classList.remove('active');
         } else {
-            // START Logic
-            gestureToggleBtn.classList.add('active'); // Visual feedback
+            // START
+            gestureToggleBtn.classList.add('active');
             gesturePanel.classList.remove('hidden');
 
             try {
@@ -263,39 +184,37 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
                 gestureCanvas.height = 480;
                 gestureController = new GestureController(gestureVideo, gestureCanvas);
                 await gestureController.initialize();
-                
+
                 gestureController.onGesture((event) => {
-                    const voiceId = event.fingerId; 
+                    const voiceId = event.fingerId;
 
                     if (event.type === 'start') {
-                        const notes = ScaleManager.generatePentatonicScale(currentRoot, currentScaleType, event.octave);
-                        const rootNote = notes[event.noteIndex];
-                        if (rootNote) {
-                             const harmonyNotes = ScaleManager.generateHarmony(rootNote.name, currentHarmony, currentChordType);
-                             const frequencies = harmonyNotes.map(n => ScaleManager.noteToFrequency(n.name, n.octave + (event.octave - 4)));
-                             
-                             audio.triggerNote(voiceId, frequencies, currentHarmony);
-                             activeFingerVoices.set(voiceId, { index: event.noteIndex, octave: event.octave });
-                             
-                             renderer.setActive(event.noteIndex, event.octave, true);
-                        }
+                        pipeline.process({
+                            type: 'note_on',
+                            index: event.noteIndex,
+                            octave: event.octave,
+                            velocity: 1.0,
+                        });
+                        activeFingerVoices.set(voiceId, { index: event.noteIndex, octave: event.octave });
 
                     } else if (event.type === 'stop') {
-                        audio.stopNote(voiceId);
                         const noteData = activeFingerVoices.get(voiceId);
                         if (noteData) {
-                            renderer.setActive(noteData.index, noteData.octave, false);
+                            pipeline.process({ type: 'note_off', index: noteData.index, octave: noteData.octave });
                             activeFingerVoices.delete(voiceId);
                         }
 
                     } else if (event.type === 'modulate') {
-                        if (event.pitchBend !== undefined && event.timbre !== undefined) {
-                            audio.modulateNote(
-                                voiceId, 
-                                event.pitchBend, 
-                                event.timbre,
-                                event.resonance || 0 // Pass resonance
-                            ); 
+                        const noteData = activeFingerVoices.get(voiceId);
+                        if (noteData && event.pitchBend !== undefined && event.timbre !== undefined) {
+                            pipeline.process({
+                                type: 'note_modulate',
+                                index: noteData.index,
+                                octave: noteData.octave,
+                                pitchBend: event.pitchBend,
+                                timbre: event.timbre,
+                                resonance: event.resonance || 0,
+                            });
                         }
                     }
                 });
@@ -307,11 +226,10 @@ if (gestureToggleBtn && gesturePanel && gestureCloseBtn) {
             }
         }
     });
-    
+
     gestureCloseBtn.addEventListener('click', () => {
-        // Just hide the panel, keep controller running
         gesturePanel.classList.add('hidden');
     });
 }
 
-console.log('Pentatonic Synth Initialized');
+console.log('PentaSynth v2.0 Initialized');
