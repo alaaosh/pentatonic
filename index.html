@@ -3,25 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pentatonic Harmony Instrument</title>
+    <title>PentaSynth v2</title>
     <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
     <div id="audio-unlock" class="unlock-overlay">
         <div class="unlock-content">
-            <h1>Pentatonic Synth</h1>
-            <p>High-performance harmonic instrument</p>
-            <button id="start-btn">Start Instrument</button>
+            <h1>PentaSynth</h1>
+            <p>Algorithmic Pentatonic Synthesizer</p>
+            <button id="start-btn">Start</button>
         </div>
     </div>
 
     <div class="app-layout">
         <header class="top-bar">
-            <h1>Pentatonic Synth</h1>
             <div class="top-bar-controls">
                 <!-- Camera Toggle -->
                 <div class="control-group">
-                    <label>Cam</label>
                     <button id="gesture-toggle" class="icon-btn-header" title="Toggle Camera Control">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="10" r="3" />
@@ -32,7 +30,7 @@
                     </button>
                 </div>
 
-                <!-- Master Volume (Vertical in Top Bar) -->
+                <!-- Master Volume -->
                 <div class="control-group vol-group">
                     <label>Vol</label>
                     <div id="volume-slider" class="vertical-slider-container">
@@ -45,141 +43,41 @@
 
                 <div class="control-divider vertical"></div>
 
-                <!-- Tone Shaping Section (Wave + Dials) -->
-                <div class="tone-shaping-group">
-                    <div class="control-group">
-                        <label>Wave</label>
-                        <div id="waveform-select" class="segmented-control">
-                            <button class="segment-btn active" data-value="sawtooth">Saw</button>
-                            <button class="segment-btn" data-value="square">Sqr</button>
-                            <button class="segment-btn" data-value="triangle">Tri</button>
-                            <button class="segment-btn" data-value="sine">Sin</button>
-                        </div>
+                <!-- Scale Selection (compact) -->
+                <div class="control-group">
+                    <label>Root</label>
+                    <div id="root-strip" class="root-strip-compact">
+                        <button class="root-btn active" data-value="C">C</button>
+                        <button class="root-btn" data-value="C#">C#</button>
+                        <button class="root-btn" data-value="D">D</button>
+                        <button class="root-btn" data-value="D#">D#</button>
+                        <button class="root-btn" data-value="E">E</button>
+                        <button class="root-btn" data-value="F">F</button>
+                        <button class="root-btn" data-value="F#">F#</button>
+                        <button class="root-btn" data-value="G">G</button>
+                        <button class="root-btn" data-value="G#">G#</button>
+                        <button class="root-btn" data-value="A">A</button>
+                        <button class="root-btn" data-value="A#">A#</button>
+                        <button class="root-btn" data-value="B">B</button>
                     </div>
+                </div>
 
-                    <div class="control-divider vertical inner-divider"></div>
-
-                    <!-- Synth Dials -->
-                    <div class="synth-dials-row">
-                        <div class="control-group">
-                            <label>Filter</label>
-                            <div id="dial-filter" class="dial-container"></div>
-                        </div>
-                        <div class="control-group">
-                            <label>Res</label>
-                            <div id="dial-resonance" class="dial-container"></div>
-                        </div>
-                        <div class="control-group">
-                            <label>Atk</label>
-                            <div id="dial-attack" class="dial-container"></div>
-                        </div>
-                        <div class="control-group">
-                            <label>Dec</label>
-                            <div id="dial-decay" class="dial-container"></div>
-                        </div>
-                        <div class="control-group">
-                            <label>Sus</label>
-                            <div id="dial-sustain" class="dial-container"></div>
-                        </div>
-                        <div class="control-group">
-                            <label>Rel</label>
-                            <div id="dial-release" class="dial-container"></div>
-                        </div>
-                    </div>
+                <div class="control-group">
+                    <label>Scale</label>
+                    <select id="scale-select" class="modern-select compact-select">
+                        <option value="major">Major</option>
+                        <option value="minor">Minor</option>
+                        <option value="blues">Blues</option>
+                        <option value="yo">Yo</option>
+                        <option value="hirajoshi">Hirajoshi</option>
+                    </select>
                 </div>
             </div>
         </header>
 
         <aside class="sidebar sidebar-left">
-            <div class="control-group">
-                <label>Root Note</label>
-                <div id="root-strip" class="root-grid">
-                    <button class="root-btn active" data-value="C">C</button>
-                    <button class="root-btn" data-value="C#">C#</button>
-                    <button class="root-btn" data-value="D">D</button>
-                    <button class="root-btn" data-value="D#">D#</button>
-                    <button class="root-btn" data-value="E">E</button>
-                    <button class="root-btn" data-value="F">F</button>
-                    <button class="root-btn" data-value="F#">F#</button>
-                    <button class="root-btn" data-value="G">G</button>
-                    <button class="root-btn" data-value="G#">G#</button>
-                    <button class="root-btn" data-value="A">A</button>
-                    <button class="root-btn" data-value="A#">A#</button>
-                    <button class="root-btn" data-value="B">B</button>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label>Scale Type</label>
-                <select id="scale-select" class="modern-select">
-                    <option value="major">Major Pentatonic</option>
-                    <option value="minor">Minor Pentatonic</option>
-                    <option value="blues">Blues</option>
-                    <option value="yo">Yo (Japanese)</option>
-                    <option value="hirajoshi">Hirajoshi</option>
-                </select>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <canvas id="instrument" 
-                tabindex="0" 
-                role="application" 
-                aria-label="Pentatonic Musical Instrument" 
-                aria-description="Play five pentatonic notes using touch, mouse, or keys A, S, D, F, and G."></canvas>
-            
-            <div id="note-display" aria-live="polite">Touch to play</div>
-            
-            <!-- Gesture Control Panel -->
-            <div id="gesture-panel" class="gesture-panel hidden">
-                <div class="gesture-header">
-                    <h3>Camera Gesture Control</h3>
-                    <div class="gesture-actions">
-                        <label class="icon-btn" title="Upload Video">
-                            📁 <input type="file" id="video-upload" accept="video/*" hidden>
-                        </label>
-                        <button id="gesture-close" class="gesture-close-btn">×</button>
-                    </div>
-                </div>
-                <video id="gesture-video" class="gesture-video" autoplay playsinline controls></video>
-                <canvas id="gesture-canvas" class="gesture-canvas"></canvas>
-                <div class="gesture-info">
-                    <p><strong>Air Piano Mode</strong></p>
-                    <p>🖐 Left Hand = Bass | Right Hand = Melody</p>
-                    <p>👇 Bend any finger to play a note</p>
-                    <p>↕️ Move bent finger up/down to bend pitch</p>
-                    <p>✊ Make a fist to stop sound</p>
-                </div>
-            </div>
-            
-            <!-- Gesture Control Panel -->
-        </main>
-
-        <aside class="sidebar sidebar-right">
-            <div class="control-group">
-                <label>Harmony Mode</label>
-                <div id="harmony-mode" class="segmented-control vertical">
-                    <button class="segment-btn" data-value="none">Single</button>
-                    <button class="segment-btn active" data-value="chord">Chord</button>
-                    <button class="segment-btn" data-value="power">Power</button>
-                    <button class="segment-btn" data-value="arpeggio">Arp</button>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label>Chord Type</label>
-                <select id="chord-type" class="modern-select">
-                    <option value="maj7">Major 7th</option>
-                    <option value="min7">Minor 7th</option>
-                    <option value="dom7">Dominant 7th</option>
-                    <option value="maj9">Major 9th</option>
-                    <option value="min9">Minor 9th</option>
-                    <option value="sus4">Suspended 4th</option>
-                    <option value="dim7">Diminished 7th</option>
-                </select>
-            </div>
-
-            <div class="control-divider"></div>
+            <!-- The Complexity Dial — the single most important control -->
+            <div id="complexity-dial-container" class="complexity-dial-wrapper"></div>
 
             <div class="control-group">
                 <label>Octave Range</label>
@@ -191,6 +89,42 @@
                 </div>
             </div>
         </aside>
+
+        <main class="main-content">
+            <canvas id="instrument" 
+                tabindex="0" 
+                role="application" 
+                aria-label="Pentatonic Musical Instrument" 
+                aria-description="Play five pentatonic notes using touch, mouse, or keys Q-T (top), A-G (mid), Z-B (bottom)."></canvas>
+            
+            <div id="note-display" aria-live="polite"></div>
+            
+            <!-- Gesture Control Panel -->
+            <div id="gesture-panel" class="gesture-panel hidden">
+                <div class="gesture-header">
+                    <h3>Air Piano</h3>
+                    <div class="gesture-actions">
+                        <label class="icon-btn" title="Upload Video">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <input type="file" id="video-upload" accept="video/*" hidden>
+                        </label>
+                        <button id="gesture-close" class="gesture-close-btn">&times;</button>
+                    </div>
+                </div>
+                <video id="gesture-video" class="gesture-video" autoplay playsinline controls></video>
+                <canvas id="gesture-canvas" class="gesture-canvas"></canvas>
+                <div class="gesture-info">
+                    <p><strong>Air Piano Mode</strong></p>
+                    <p>Left Hand = Bass | Right Hand = Melody</p>
+                    <p>Bend finger = play | Straighten = stop</p>
+                    <p>Move up/down = pitch bend</p>
+                </div>
+            </div>
+        </main>
     </div>
     
     <script type="module" src="/src/main.ts"></script>
