@@ -26,6 +26,7 @@ export interface Voice {
 export class SynthesisEngine {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
   private voices: Map<string | number, Voice[]> = new Map();
   private arpeggioIntervals: Map<string | number, number> = new Map();
   private totalVoices: number = 0;
@@ -49,7 +50,10 @@ export class SynthesisEngine {
     if (!this.context) {
       this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.masterGain = this.context.createGain();
-      this.masterGain.connect(this.context.destination);
+      this.analyser = this.context.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.masterGain.connect(this.analyser);
+      this.analyser.connect(this.context.destination);
       this.masterGain.gain.value = 0.5;
     }
     return this.context;
@@ -229,5 +233,26 @@ export class SynthesisEngine {
 
   stopAll() {
     Array.from(this.voices.keys()).forEach(id => this.stopNote(id));
+  }
+  
+  private analyserDataArray: Uint8Array | null = null;
+  
+  /**
+   * Get analyzer data for visualization
+   */
+  getAnalyserData() {
+    if (!this.analyser) return null;
+    
+    const bufferLength = this.analyser.frequencyBinCount;
+    if (!this.analyserDataArray || this.analyserDataArray.length !== bufferLength) {
+        this.analyserDataArray = new Uint8Array(bufferLength);
+    }
+    
+    this.analyser.getByteFrequencyData(this.analyserDataArray as any);
+    
+    return {
+      bufferLength,
+      dataArray: this.analyserDataArray
+    };
   }
 }

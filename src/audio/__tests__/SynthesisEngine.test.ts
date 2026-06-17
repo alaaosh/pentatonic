@@ -38,6 +38,12 @@ class MockAudioContext {
       setTargetAtTime: vi.fn()
     }
   }));
+  createAnalyser = vi.fn(() => ({
+    connect: vi.fn(),
+    frequencyBinCount: 1024,
+    getByteFrequencyData: vi.fn(),
+    fftSize: 2048
+  }));
   resume = vi.fn(() => Promise.resolve());
 }
 

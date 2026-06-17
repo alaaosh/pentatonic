@@ -27,6 +27,8 @@ export interface NoteModulateEvent {
   pitchBend: number; // -1 to 1 (semitones)
   timbre: number;   // 0 to 1 (filter offset)
   resonance?: number; // 0 to 1 (filter resonance boost)
+  x?: number;       // x coordinate for visual feedback
+  y?: number;       // y coordinate for visual feedback
 }
 
 export interface ParamChangeEvent {
